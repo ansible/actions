@@ -1,5 +1,10 @@
-# actions
+# Reusable Github Actions and settings
 
-### This is currently a POC and exploration project.
+This repository aims to host Github Actions and settings that can easily
+be reused by other repositories.
 
-Various actions and CI tools to help maintain projects
+Please note that at this moment this is in "pre-alpha" development status,
+so if you want to be an early adopter or have an active involvement with its
+development, contact Ansible DevTools team.
+
+## Components
