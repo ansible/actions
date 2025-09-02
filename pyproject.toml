@@ -1,0 +1,251 @@
+# cspell: ignore addopts conftest minversion pyargs posargs PYTHONPYCACHEPREFIX PYTHONIOENCODING PYTHONBREAKPOINT
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools >= 65.3.0", # required by pyproject+setuptools_scm integration and editable installs
+  "setuptools_scm[toml] >= 7.0.5" # required for "no-local-version" scheme
+]
+
+[dependency-groups]
+dev = [
+  "coverage-enable-subprocess", # see https://github.com/nedbat/coveragepy/issues/1341#issuecomment-1228942657
+  "coverage[toml] >= 6.4.4",
+  "pytest >= 7.2.2",
+  "pytest-xdist >= 2.1.0"
+]
+lint = [
+  "pre-commit>=3.5.0",
+  "pre-commit-uv>=4.1.4"
+]
+
+[project]
+name = 'ansible-actions'
+dynamic = ["version"]
+dependencies = [
+  "actions-toolkit>=0.1.15"
+]
+requires-python = ">=3.12"
+
+[project.scripts]
+dynamic-matrix = "dynamic_matrix.__main__:main"
+
+[tool.black]
+target-version = ["py312"]
+
+[tool.codespell]
+skip = ".tox,.mypy_cache,build,.git,.eggs,pip-wheel-metadata"
+
+# Keep this default because xml/report do not know to use load it from config file:
+# data_file = ".coverage"
+[tool.coverage.paths]
+source = ["src", ".tox/*/site-packages"]
+
+[tool.coverage.report]
+exclude_also = ["pragma: no cover", "if TYPE_CHECKING:"]
+omit = ["tests/*"]
+# Increase it just so it would pass on any single-python run
+fail_under = 92
+skip_covered = true
+skip_empty = true
+# During development we might remove code (files) with coverage data, and we dont want to fail:
+ignore_errors = true
+show_missing = true
+
+[tool.coverage.run]
+source = ["."]
+# Do not use branch until bug is fixes:
+# https://github.com/nedbat/coveragepy/issues/605
+# branch = true
+parallel = true
+concurrency = ["multiprocessing", "thread"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+color_output = true
+error_summary = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+# disallow_any_unimported = True
+# warn_redundant_casts = True
+# warn_return_any = True
+# warn_unused_configs = True
+# https://github.com/python/mypy/issues/12664
+incremental = false
+
+[[tool.mypy.overrides]]
+module = [
+  "actions_toolkit"
+]
+ignore_missing_imports = true
+ignore_errors = true
+
+[tool.pyright]
+include = ["src"]
+# https://github.com/microsoft/pyright/blob/main/docs/configuration.md#sample-pyprojecttoml-file
+pythonVersion = "3.12"
+# https://github.com/microsoft/pyright/issues/777
+"stubPath" = ""
+
+# spell-checker:ignore filterwarnings norecursedirs optionflags
+[tool.pytest.ini_options]
+# do not add options here as this will likely break either console runs or IDE
+# integration like vscode or pycharm
+addopts = "-p no:pytest_cov"
+# https://code.visualstudio.com/docs/python/testing
+# coverage is re-enabled in `tox.ini`. That approach is safer than
+# `--no-cov` which prevents activation from tox.ini and which also fails
+# when plugin is effectively missing.
+doctest_optionflags = ["ALLOW_UNICODE", "ELLIPSIS"]
+filterwarnings = [
+  "error",
+  # https://sourceforge.net/p/ruamel-yaml/tickets/452/
+  "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning",
+  # https://github.com/spdx/tools-python/issues/507
+  "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+  # We raise one non critical warning from our own conftest.py:
+  "always::pytest.PytestWarning",
+  # py312 ansible-core
+  # https://github.com/ansible/ansible/issues/81906
+  "ignore:'importlib.abc.TraversableResources' is deprecated and slated for removal in Python 3.14:DeprecationWarning",
+  # https://github.com/ansible/ansible/pull/80968
+  "ignore:Attribute s is deprecated and will be removed in Python 3.14; use value instead:DeprecationWarning"
+]
+minversion = "4.6.6"
+norecursedirs = [
+  "*.egg",
+  ".cache",
+  ".eggs",
+  ".git",
+  ".github",
+  ".mypy_cache",
+  ".projects",
+  ".tox",
+  "build",
+  "collections",
+  "dist",
+  "docs"
+]
+python_files = [
+  "test_*.py",
+  # Ref: https://docs.pytest.org/en/latest/reference.html#confval-python_files
+  # Needed to discover legacy nose test modules:
+  "Test*.py"
+]
+xfail_strict = true
+
+[tool.ruff]
+target-version = "py312"
+# Same as Black.
+line-length = 88
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "COM812", # conflict with formatter
+  "D203", # incompatible with D211
+  "D213", # incompatible with D212
+  "E501", # we use black
+  "ERA001", # auto-removal of commented out code affects development and vscode integration
+  "INP001", # "is part of an implicit namespace package", all false positives
+  "PLW2901", # PLW2901: Redefined loop variable
+  "RET504", # Unnecessary variable assignment before `return` statement
+  "S603" # https://github.com/astral-sh/ruff/issues/4045
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["SLF001", "S101", "FBT001"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.tox]
+min_version = "4.21.2"
+env_list = ["lint", "py", "image"]
+isolated_build = true
+skip_missing_interpreters = true
+requires = [
+  "tox>=4.28.4",
+  "tox-extra >= 2.0.2",
+  "tox-uv >= 1.28.0",
+  "setuptools >= 65.3.0" # editable installs
+]
+
+[tool.tox.env.image]
+dependency_groups = []
+description = "Run the tests in a container"
+skip_install = true
+commands = [
+  ["docker", "build", "-t", "ansible-actions", "."],
+  ["docker", "run", "-it", "--rm", "ansible-actions"]
+]
+allowlist_externals = ["docker", "sh"]
+
+[tool.tox.env.lint]
+description = "Run all linters"
+dependency_groups = ["lint"]
+commands_pre = []
+commands = [
+  ["pre-commit", "run", "--all-files", "--show-diff-on-failure"]
+]
+
+[tool.tox.env_run_base]
+description = "Run the tests under {base_python}"
+dependency_groups = ["dev"]
+commands_pre = [
+  ["sh", "-c", "rm -f {env_dir}/.coverage.* 2>/dev/null || true"],
+  # safety measure to assure we do not accidentally run tests with broken dependencies
+  ["uv", "pip", "check"]
+]
+commands = [
+  [
+    "{env_python}",
+    "-m",
+    "coverage",
+    "run",
+    "-m",
+    "pytest",
+    {default = ["-v", "-n", "0", "--durations=10", "--doctest-modules", "--showlocals", "-ra"], extend = true, replace = "posargs"}
+  ]
+]
+pass_env = [
+  "CURL_CA_BUNDLE", # https proxies, https://github.com/tox-dev/tox/issues/1437
+  "FORCE_COLOR",
+  "HOME",
+  "NO_COLOR",
+  "PYTEST_*", # allows developer to define their own preferences
+  "PYTHON*", # PYTHONPYCACHEPREFIX, PYTHONIOENCODING, PYTHONBREAKPOINT,...
+  "PY_COLORS",
+  "RTD_TOKEN",
+  "REQUESTS_CA_BUNDLE", # https proxies
+  "SETUPTOOLS_SCM_DEBUG",
+  "SSL_CERT_FILE", # https proxies
+  "SSH_AUTH_SOCK", # may be needed by git
+  "LANG",
+  "LC_*",
+  "PRE_COMMIT_HOME",
+  "UV_*"
+]
+allowlist_externals = [
+  "bash",
+  "find",
+  "git",
+  "pwd",
+  "rm",
+  "sh",
+  "tox"
+]
+# https://tox.wiki/en/latest/upgrading.html#editable-mode
+package = "editable"
+
+[tool.tox.env_run_base.set_env]
+COVERAGE_FILE = "{env:COVERAGE_FILE:{env_dir}/.coverage.{env_name}}"
+COVERAGE_PROCESS_START = "{tox_root}/pyproject.toml"
+PRE_COMMIT_COLOR = "always"
+FORCE_COLOR = "1"
+
+[tool.uv]
+default-groups = ["dev"]
+package = true

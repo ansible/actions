@@ -1,0 +1,14 @@
+---
+dictionaryDefinitions:
+  - name: words
+    path: dictionary.txt
+    addWords: true
+dictionaries:
+  # Use `cspell-cli trace word` to check where a work is defined
+  - en_US
+  - bash
+  - words
+  - python
+ignorePaths:
+  - .vscode/settings.json
+  - cspell.config.yaml

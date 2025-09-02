@@ -1,0 +1,9 @@
+[tasks]
+
+[tasks.renovate]
+description = "Run renovate"
+run = "LOG_LEVEL=info RENOVATE_X_SQLITE_PACKAGE_CACHE=true RENOVATE_CONFIG_FILE=$(find . -maxdepth 1 -type f -name 'renovate.json') npx --silent --yes -p re2 -p better-sqlite3 -p renovate renovate --platform=github --onboarding=false $(gh repo view --json nameWithOwner -q .nameWithOwner|cat)"
+
+[tools]
+python = "latest"
+uv = "latest"
