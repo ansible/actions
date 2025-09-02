@@ -1,0 +1,72 @@
+---
+# cspell: ignore konflux autolabeler
+# Format and labels used by Ansible DevTools projects
+name-template: v$RESOLVED_VERSION
+tag-template: v$RESOLVED_VERSION
+# Use '-' instead of '*' for unordered list to match prettier behavior
+change-template: "- $TITLE (#$NUMBER) @$AUTHOR"
+categories:
+  # Keep titles single worlds, or they become md bookmarks
+  - title: Breaking
+    labels:
+      - breaking
+  - title: Features
+    labels:
+      - feat # #006b75
+  - title: Fixes
+    labels:
+      - docs
+      - fix # #fbca04
+      - perf
+      - refactor
+  - title: Maintenance # fef2c0
+    labels:
+      - build
+      - chore
+      - ci
+      - style
+      - test
+replacers:
+  # https://github.com/release-drafter/release-drafter/issues/569#issuecomment-645942909
+  - search: /(?:and )?@(pre-commit-ci|dependabot|renovate|konflux-internal-p02)(?:\[bot\])?,?/g
+    replace: ""
+version-resolver:
+  # some projects are using SemVer, so keep 'major' label for major.
+  minor:
+    labels:
+      - breaking
+      - feat
+  patch:
+    labels:
+      - docs
+      - fix
+      - perf
+      - refactor
+  default: patch
+exclude-contributors:
+  - dependabot
+  - dependabot[bot]
+  - github-actions
+  - github-actions[bot]
+  - konflux-internal-p02
+  - konflux-internal-p02[bot]
+  - pre-commit-ci
+  - pre-commit-ci[bot]
+  - renovate
+  - renovate[bot]
+autolabeler:
+  - label: breaking
+    title: # "!" determines a breaking change
+      - "^[a-z]+(\\([^)]+\\))?!:"
+    body:
+      - "/^BREAKING CHANGE: /i"
+  - label: feat
+    title:
+      - /^(feat)/i
+  - label: fix
+  - label: chore
+    title:
+      - /pre-commit autoupdate/
+      - /^(chore|build|ci|test|style)/i
+template: |
+  $CHANGES
