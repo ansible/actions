@@ -145,6 +145,8 @@ def main() -> None:  # noqa: C901,PLR0912,PLR0915
                 f"{py_version[0]}.{py_version[1:]}"
                 for py_version in re.findall(r"py(\d+)", line)
             ]
+            # remove duplicates while preserving order
+            pythons = list(dict.fromkeys(pythons))
             if not pythons:
                 pythons.append(default_python)
             if "runner" not in args:
@@ -155,6 +157,10 @@ def main() -> None:  # noqa: C901,PLR0912,PLR0915
                     platform_name = "linux"  # implicit platform (os) to use
                 args["runner"] = PLATFORM_MAP[platform_name]
 
+            if len(pythons) > 1:
+                core.warning(
+                    f"Multiple python versions found: {pythons} but setup-uv only supports one version, we will use the first one. See https://github.com/astral-sh/setup-uv/issues/122 for more details."
+                )
             data = {
                 # we expose all args in the output
                 **args,
@@ -168,7 +174,7 @@ def main() -> None:  # noqa: C901,PLR0912,PLR0915
                     ],
                 ),
                 # versions compatible with astral-sh/setup-uv action
-                "uv_python_version": "\n".join(pythons),
+                "uv_python_version": pythons[0],
                 "os": args["runner"],
             }
             for index, command in enumerate(commands[1:]):

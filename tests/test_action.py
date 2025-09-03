@@ -33,7 +33,7 @@ import pytest
                             "name": "all-linux-arm64",
                             "os": "ubuntu-24.04-arm64-2core",
                             "python_version": "3.8\n3.10",
-                            "uv_python_version": "3.8\n3.10",
+                            "uv_python_version": "3.8",
                             "runner": "ubuntu-24.04-arm64-2core",
                         },
                         {
