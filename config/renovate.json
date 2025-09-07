@@ -14,6 +14,18 @@
     "helpers:pinGitHubActionDigestsToSemver",
     "schedule:automergeEarlyMondays"
   ],
+  "github-actions": {
+    "enabled": true,
+    "packageRules": [
+      {
+        "matchPackageNames": [
+          "*",
+          "!/ansible/team-devtools/",
+          "!/Actions-R-Us/actions-tagger/"
+        ]
+      }
+    ]
+  },
   "groupName": "all dependencies",
   "groupSlug": "all",
   "labels": ["chore", "dependencies"],

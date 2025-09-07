@@ -83,7 +83,7 @@ jobs:
       matrix: ${{ fromJson(needs.pre.outputs.matrix) }}
 
     steps: # common steps used to test with tox
-      - uses: actions/checkout@main
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
