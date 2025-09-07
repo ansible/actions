@@ -20,8 +20,11 @@
   "lockFileMaintenance": {
     "commitMessageAction": "update",
     "enabled": true,
+    "groupName": "all dependencies",
+    "groupSlug": "all",
     "recreateWhen": "always",
-    "rebaseStalePrs": true
+    "rebaseWhen": "behind-base-branch",
+    "rangeStrategy": "update-lockfile"
   },
   "packageRules": [
     {
