@@ -3,16 +3,25 @@
   "automerge": true,
   "automergeStrategy": "squash",
   "configMigration": true,
+  "commitMessageAction": "update",
+  "commitMessageTopic": "dependencies",
+  "commitMessageExtra": "",
+  "dependencyDashboard": true,
   "extends": [
     "config:recommended",
-    "helpers:pinGitHubActionDigests",
+    ":semanticCommitTypeAll(chore)",
+    ":enablePreCommit",
+    "helpers:pinGitHubActionDigestsToSemver",
     "schedule:automergeEarlyMondays"
   ],
   "groupName": "all dependencies",
   "groupSlug": "all",
   "labels": ["chore", "dependencies"],
   "lockFileMaintenance": {
-    "enabled": true
+    "commitMessageAction": "update",
+    "enabled": true,
+    "recreateWhen": "always",
+    "rebaseStalePrs": true
   },
   "packageRules": [
     {
@@ -22,9 +31,6 @@
       "minimumReleaseAge": "2 days"
     }
   ],
-  "pre-commit": {
-    "enabled": true
-  },
   "rangeStrategy": "update-lockfile",
   "separateMajorMinor": false,
   "separateMinorPatch": false
