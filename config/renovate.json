@@ -2,10 +2,10 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "automerge": true,
   "automergeStrategy": "squash",
-  "configMigration": true,
   "commitMessageAction": "update",
-  "commitMessageTopic": "dependencies",
   "commitMessageExtra": "",
+  "commitMessageTopic": "dependencies",
+  "configMigration": true,
   "dependencyDashboard": true,
   "extends": [
     "config:recommended",
@@ -34,9 +34,9 @@
     "enabled": true,
     "groupName": "all dependencies",
     "groupSlug": "all",
-    "recreateWhen": "always",
+    "rangeStrategy": "update-lockfile",
     "rebaseWhen": "behind-base-branch",
-    "rangeStrategy": "update-lockfile"
+    "recreateWhen": "always"
   },
   "packageRules": [
     {

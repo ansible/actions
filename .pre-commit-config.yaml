@@ -12,7 +12,7 @@ ci:
     - renovate-config-validator # container limits
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.8.14
+    rev: 0.8.15
     hooks:
       - id: uv-sync
       - id: uv-lock
@@ -23,26 +23,25 @@ repos:
         args: ["--upgrade"]
         stages: [manual]
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 41.95.0
+    rev: 41.97.10
     hooks:
       - id: renovate-config-validator
         alias: renovate
         args: [--strict]
-  - repo: https://github.com/pycontribs/mirrors-prettier
-    # keep it before yamllint
-    rev: v3.6.2
+  - repo: https://github.com/biomejs/pre-commit
+    rev: "v2.2.3"
     hooks:
-      - id: prettier
-        additional_dependencies:
-          - prettier
-          - prettier-plugin-toml
+      - id: biome-check
+        name: biome
+        alias: biome
+        args: [--unsafe]
   - repo: https://github.com/streetsidesoftware/cspell-cli
     rev: v9.2.0
     hooks:
       - id: cspell
+        name: cspell
         # entry: codespell --relative
         args: [--relative, --no-progress, --no-summary]
-        name: Spell check with cspell
   - repo: https://github.com/sirosen/check-jsonschema
     rev: 0.33.3
     hooks:
@@ -64,7 +63,7 @@ repos:
       - id: toml-sort-fix
         alias: toml
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.11
+    rev: v0.12.12
     hooks:
       - id: ruff-format
         alias: ruff
