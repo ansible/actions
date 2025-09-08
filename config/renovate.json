@@ -2,6 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "automerge": true,
   "automergeStrategy": "squash",
+  "branchTopic": "all",
   "commitMessageAction": "update",
   "commitMessageExtra": "",
   "commitMessageTopic": "dependencies",
@@ -11,10 +12,10 @@
     "config:recommended",
     ":semanticCommitTypeAll(chore)",
     ":enablePreCommit",
-    "helpers:pinGitHubActionDigestsToSemver",
     "schedule:automergeEarlyMondays"
   ],
   "github-actions": {
+    "branchTopic": "all",
     "enabled": true,
     "packageRules": [
       {
@@ -40,13 +41,26 @@
   },
   "packageRules": [
     {
+      "branchTopic": "all",
       "groupName": "all dependencies",
       "groupSlug": "all",
       "matchPackageNames": ["*"],
       "minimumReleaseAge": "2 days"
     }
   ],
+  "pin": {
+    "branchTopic": "all",
+    "groupName": "all dependencies",
+    "groupSlug": "all"
+  },
+  "pinDigest": {
+    "branchTopic": "all",
+    "groupName": "all dependencies",
+    "groupSlug": "all"
+  },
+  "prConcurrentLimit": 1,
   "rangeStrategy": "update-lockfile",
+  "recreateWhen": "always",
   "separateMajorMinor": false,
   "separateMinorPatch": false
 }
