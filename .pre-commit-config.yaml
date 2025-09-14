@@ -12,7 +12,7 @@ ci:
     - renovate-config-validator # container limits
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.8.15
+    rev: 0.8.17
     hooks:
       - id: uv-sync
       - id: uv-lock
@@ -23,13 +23,13 @@ repos:
         args: ["--upgrade"]
         stages: [manual]
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 41.97.10
+    rev: 41.112.0
     hooks:
       - id: renovate-config-validator
         alias: renovate
         args: [--strict]
   - repo: https://github.com/biomejs/pre-commit
-    rev: "v2.2.3"
+    rev: "v2.2.4"
     hooks:
       - id: biome-check
         name: biome
@@ -58,12 +58,12 @@ repos:
       - id: debug-statements
         language_version: python3
   - repo: https://github.com/pappasam/toml-sort
-    rev: v0.24.2
+    rev: v0.24.3
     hooks:
       - id: toml-sort-fix
         alias: toml
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+    rev: v0.13.0
     hooks:
       - id: ruff-format
         alias: ruff
@@ -71,7 +71,7 @@ repos:
         args: ["--fix"]
         alias: ruff
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.17.1
+    rev: v1.18.1
     hooks:
       - id: mypy
         # empty args needed in order to match mypy cli behavior
