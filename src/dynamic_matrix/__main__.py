@@ -15,7 +15,7 @@ PYTHON_REDIRECTS = {
 }
 PLATFORM_MAP = {
     "linux": "ubuntu-24.04",
-    "macos": "macos-13",
+    "macos": "macos-15",
     "windows": "windows-latest",
 }
 IMPLICIT_PLATFORM = "linux"
