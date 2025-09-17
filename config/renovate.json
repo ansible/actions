@@ -8,6 +8,7 @@
   "commitMessageTopic": "dependencies",
   "configMigration": true,
   "dependencyDashboard": true,
+  "dependencyDashboardAutoclose": true,
   "extends": [
     "config:recommended",
     ":semanticCommitTypeAll(chore)",
