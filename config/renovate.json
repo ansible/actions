@@ -40,6 +40,7 @@
     "rebaseWhen": "behind-base-branch",
     "recreateWhen": "always"
   },
+  "minimumReleaseAge": "2 days",
   "packageRules": [
     {
       "branchTopic": "all",
@@ -62,6 +63,8 @@
   "prConcurrentLimit": 1,
   "rangeStrategy": "update-lockfile",
   "recreateWhen": "always",
+  "schedule": ["before 4am on monday"],
   "separateMajorMinor": false,
-  "separateMinorPatch": false
+  "separateMinorPatch": false,
+  "timezone": "UTC"
 }
