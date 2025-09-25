@@ -1,0 +1,11 @@
+---
+# hooks that rely on uv to track dependencies instead of pre-commit hooks
+
+- id: ansible-lint
+  # keep name lowercase for consistency with other hook names
+  name: ansible-lint
+  description: This hook runs ansible-lint --fix
+  entry: uv run -q --isolated ansible-lint --fix -v --force-color
+  language: system
+  pass_filenames: false
+  always_run: true
