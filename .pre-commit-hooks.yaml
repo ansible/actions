@@ -3,19 +3,27 @@
 # To ensure we get reproducible results on all platforms we hardcode the
 # python versions to 3.13. Once ansible-core will release a version that
 # supports python 3.14 we will switch to 3.14
-- id: ansible-lint
-  # keep name lowercase for consistency with other hook names
-  name: ansible-lint
-  description: This hook runs ansible-lint --fix
-  entry: uv run -q --python=3.13 --group lint ansible-lint --fix -v --force-color
+#
+# Order matters: faster hooks first, also auto-formatters being prioritized
+- id: ruff
+  name: ruff
   language: system
+  types_or: [python, pyi, jupyter]
   pass_filenames: false
-  always_run: true
+  description: This hook runs ruff check and ruff format
+  entry: uv run -q --python=3.13 --group lint ruff check --force-exclude && uv run -q --python=3.13 --group lint ruff format --force-exclude
 - id: mypy
   name: mypy
   description: This hook runs mypy
   entry: uv run -q --python=3.13 --group lint mypy .
   language: system
   types_or: [python, pyi]
+  pass_filenames: false
+- id: ansible-lint
+  # keep name lowercase for consistency with other hook names
+  name: ansible-lint
+  description: This hook runs ansible-lint --fix
+  entry: uv run -q --python=3.13 --group lint ansible-lint --fix -v --force-color
+  language: system
   pass_filenames: false
   always_run: true
