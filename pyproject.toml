@@ -1,36 +1,29 @@
 # cspell: ignore addopts conftest minversion pyargs posargs PYTHONPYCACHEPREFIX PYTHONIOENCODING PYTHONBREAKPOINT
 
-[build-system]
-build-backend = "setuptools.build_meta"
-requires = [
-  "setuptools >= 65.3.0", # required by pyproject+setuptools_scm integration and editable installs
-  "setuptools_scm[toml] >= 7.0.5" # required for "no-local-version" scheme
-]
-
-[dependency-groups]
-dev = [
-  "coverage-enable-subprocess", # see https://github.com/nedbat/coveragepy/issues/1341#issuecomment-1228942657
-  "coverage[toml] >= 6.4.4",
-  "pytest >= 7.2.2",
-  "pytest-xdist >= 2.1.0"
-]
-lint = [
-  "mypy>=1.18.2",
-  "pre-commit>=3.5.0",
-  "pre-commit-uv>=4.1.4"
-]
-
 [project]
-name = 'ansible-actions'
-dynamic = ["version"]
-dependencies = [
-  "actions-toolkit>=0.1.15",
-  "ansible-lint>=25.9.0"
-]
+name = "ansible-actions"
 requires-python = ">=3.12"
+dependencies = ["actions-toolkit>=0.1.15", "ansible-lint>=25.9.0"]
+dynamic = ["version"]
 
 [project.scripts]
 dynamic-matrix = "dynamic_matrix.__main__:main"
+
+[dependency-groups]
+dev = [
+  "coverage-enable-subprocess",  # see https://github.com/nedbat/coveragepy/issues/1341#issuecomment-1228942657
+  "coverage[toml] >= 6.4.4",
+  "pytest-xdist >= 2.1.0",
+  "pytest >= 7.2.2",
+]
+lint = ["mypy>=1.18.2", "pre-commit>=3.5.0", "pre-commit-uv>=4.1.4"]
+
+[build-system]
+requires = [
+  "setuptools_scm[toml] >= 7.0.5",  # required for "no-local-version" scheme
+  "setuptools >= 65.3.0",  # required by pyproject+setuptools_scm integration and editable installs
+]
+build-backend = "setuptools.build_meta"
 
 [tool.black]
 target-version = ["py312"]
@@ -78,9 +71,7 @@ disallow_any_generics = true
 incremental = false
 
 [[tool.mypy.overrides]]
-module = [
-  "actions_toolkit"
-]
+module = ["actions_toolkit"]
 ignore_missing_imports = true
 ignore_errors = true
 
@@ -113,7 +104,7 @@ filterwarnings = [
   # https://github.com/ansible/ansible/issues/81906
   "ignore:'importlib.abc.TraversableResources' is deprecated and slated for removal in Python 3.14:DeprecationWarning",
   # https://github.com/ansible/ansible/pull/80968
-  "ignore:Attribute s is deprecated and will be removed in Python 3.14; use value instead:DeprecationWarning"
+  "ignore:Attribute s is deprecated and will be removed in Python 3.14; use value instead:DeprecationWarning",
 ]
 minversion = "4.6.6"
 norecursedirs = [
@@ -128,13 +119,13 @@ norecursedirs = [
   "build",
   "collections",
   "dist",
-  "docs"
+  "docs",
 ]
 python_files = [
   "test_*.py",
   # Ref: https://docs.pytest.org/en/latest/reference.html#confval-python_files
   # Needed to discover legacy nose test modules:
-  "Test*.py"
+  "Test*.py",
 ]
 xfail_strict = true
 
@@ -146,15 +137,15 @@ line-length = 88
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-  "COM812", # conflict with formatter
-  "D203", # incompatible with D211
-  "D213", # incompatible with D212
-  "E501", # we use black
-  "ERA001", # auto-removal of commented out code affects development and vscode integration
-  "INP001", # "is part of an implicit namespace package", all false positives
-  "PLW2901", # PLW2901: Redefined loop variable
-  "RET504", # Unnecessary variable assignment before `return` statement
-  "S603" # https://github.com/astral-sh/ruff/issues/4045
+  "COM812",  # conflict with formatter
+  "D203",  # incompatible with D211
+  "D213",  # incompatible with D212
+  "E501",  # we use black
+  "ERA001",  # auto-removal of commented out code affects development and vscode integration
+  "INP001",  # "is part of an implicit namespace package", all false positives
+  "PLW2901",  # PLW2901: Redefined loop variable
+  "RET504",  # Unnecessary variable assignment before `return` statement
+  "S603",  # https://github.com/astral-sh/ruff/issues/4045
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -172,7 +163,7 @@ requires = [
   "tox>=4.28.4",
   "tox-extra >= 2.0.2",
   "tox-uv >= 1.28.0",
-  "setuptools >= 65.3.0" # editable installs
+  "setuptools >= 65.3.0",  # editable installs
 ]
 
 [tool.tox.env.hooks]
@@ -186,7 +177,7 @@ description = "Run the tests in a container"
 skip_install = true
 commands = [
   ["docker", "build", "-t", "ansible-actions", "."],
-  ["docker", "run", "-it", "--rm", "ansible-actions"]
+  ["docker", "run", "-it", "--rm", "ansible-actions"],
 ]
 allowlist_externals = ["docker", "sh"]
 
@@ -194,9 +185,7 @@ allowlist_externals = ["docker", "sh"]
 description = "Run all linters"
 dependency_groups = ["lint"]
 commands_pre = []
-commands = [
-  ["pre-commit", "run", "--all-files", "--show-diff-on-failure"]
-]
+commands = [["pre-commit", "run", "--all-files", "--show-diff-on-failure"]]
 
 [tool.tox.env_run_base]
 description = """Run the tests: py{py_dot_ver}"""
@@ -204,7 +193,7 @@ dependency_groups = ["dev"]
 commands_pre = [
   ["sh", "-c", "rm -f {env_dir}/.coverage.* 2>/dev/null || true"],
   # safety measure to assure we do not accidentally run tests with broken dependencies
-  ["uv", "pip", "check"]
+  ["uv", "pip", "check"],
 ]
 commands = [
   [
@@ -214,27 +203,35 @@ commands = [
     "run",
     "-m",
     "pytest",
-    {default = ["-v", "-n", "0", "--durations=10", "--doctest-modules", "--showlocals", "-ra"], extend = true, replace = "posargs"}
+    { default = [
+      "-v",
+      "-n",
+      "0",
+      "--durations=10",
+      "--doctest-modules",
+      "--showlocals",
+      "-ra",
+    ], extend = true, replace = "posargs" },
   ],
-  ["{tox_root}/tools/report-coverage"]
+  ["{tox_root}/tools/report-coverage"],
 ]
 pass_env = [
-  "CURL_CA_BUNDLE", # https proxies, https://github.com/tox-dev/tox/issues/1437
+  "CURL_CA_BUNDLE",  # https proxies, https://github.com/tox-dev/tox/issues/1437
   "FORCE_COLOR",
   "HOME",
   "NO_COLOR",
-  "PYTEST_*", # allows developer to define their own preferences
-  "PYTHON*", # PYTHONPYCACHEPREFIX, PYTHONIOENCODING, PYTHONBREAKPOINT,...
+  "PYTEST_*",  # allows developer to define their own preferences
+  "PYTHON*",  # PYTHONPYCACHEPREFIX, PYTHONIOENCODING, PYTHONBREAKPOINT,...
   "PY_COLORS",
   "RTD_TOKEN",
-  "REQUESTS_CA_BUNDLE", # https proxies
+  "REQUESTS_CA_BUNDLE",  # https proxies
   "SETUPTOOLS_SCM_DEBUG",
-  "SSL_CERT_FILE", # https proxies
-  "SSH_AUTH_SOCK", # may be needed by git
+  "SSL_CERT_FILE",  # https proxies
+  "SSH_AUTH_SOCK",  # may be needed by git
   "LANG",
   "LC_*",
   "PRE_COMMIT_HOME",
-  "UV_*"
+  "UV_*",
 ]
 allowlist_externals = [
   "bash",
@@ -245,7 +242,7 @@ allowlist_externals = [
   "sh",
   "tox",
   "{tox_root}/tools/test-hooks.sh",
-  "{tox_root}/tools/report-coverage"
+  "{tox_root}/tools/report-coverage",
 ]
 # https://tox.wiki/en/latest/upgrading.html#editable-mode
 package = "editable"

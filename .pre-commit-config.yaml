@@ -1,3 +1,4 @@
+# cspell:ignore tombi
 ---
 ci:
   # We rely on renovate to update it but there is no way to fully disable it
@@ -9,10 +10,13 @@ ci:
 
     for more information, see https://pre-commit.ci
   skip:
+    # https://github.com/pre-commit-ci/issues/issues/55
+    - tombi-format
+    - tombi-lint
     - renovate-config-validator # container limits
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.8.22
+    rev: 0.8.23
     hooks:
       - id: uv-sync
       - id: uv-lock
@@ -57,11 +61,14 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
         language_version: python3
-  - repo: https://github.com/pappasam/toml-sort
-    rev: v0.24.3
+  - repo: https://github.com/tombi-toml/tombi-pre-commit
+    rev: v0.6.21
     hooks:
-      - id: toml-sort-fix
+      - id: tombi-format
         alias: toml
+      - id: tombi-lint
+        alias: toml
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.3
     hooks:
