@@ -39,7 +39,9 @@ jobs:
           min_python: "3.12"
           max_python: "3.14"
           default_python: "3.12"
-          other_names: lint
+          other_names: |
+            lint
+            hooks
           platforms: linux,macos
   build:
     name: ${{ matrix.name || '?' }}
