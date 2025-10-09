@@ -46,10 +46,10 @@ repos:
         name: cspell
         # entry: codespell --relative
         args: [--relative, --no-progress, --no-summary]
-  - repo: https://github.com/sirosen/check-jsonschema
-    rev: 0.34.0
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
     hooks:
-      - id: check-github-workflows
+      - id: actionlint
   - repo: https://github.com/pre-commit/pre-commit-hooks.git
     rev: v6.0.0
     hooks:
