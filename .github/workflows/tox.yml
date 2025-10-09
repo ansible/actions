@@ -3,6 +3,8 @@ name: tox
 
 on:
   merge_group:
+    branches:
+      - "main"
   push:
     branches:
       - "main"
@@ -19,114 +21,22 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref_name }}-${{ github.event.number || github.sha }}
   cancel-in-progress: true
 
-env:
-  FORCE_COLOR: 1 # tox, pytest, ansible-lint
-  PY_COLORS: 1
+permissions:
+  checks: read
+  contents: write
+  id-token: write
+  packages: write
+  pull-requests: write
 
 jobs:
-  prepare:
-    name: prepare
-    runs-on: ubuntu-24.04
-    outputs:
-      matrix: ${{ steps.generate_matrix.outputs.matrix }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-      - name: Determine matrix
-        id: generate_matrix
-        uses: ./matrix
-        with:
-          min_python: "3.12"
-          max_python: "3.14"
-          default_python: "3.12"
-          other_names: |
-            lint
-            hooks
-          platforms: linux,macos
-  build:
-    name: ${{ matrix.name || '?' }}
-    runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
-    needs:
-      - prepare
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-      - name: Set pre-commit cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        if: ${{ matrix.name == 'lint' }}
-        with:
-          path: |
-            ~/.cache/pre-commit
-          key: pre-commit-${{ matrix.name }}-${{ hashFiles('.pre-commit-config.yaml') }}
-
-      - name: Set up Python ${{ matrix.uv_python_version }}
-        uses: astral-sh/setup-uv@v6
-        with:
-          python-version: ${{ matrix.uv_python_version }}
-      - run: |
-          set -exuo pipefail
-          uv tool install pip
-          uv tool install coverage
-          uv tool install tox --with tox-uv
-          uv --version
-          tox --version
-          pip --version
-          coverage --version
-      - run: "${{ matrix.command }}"
-  # codeql:
-  #   name: codeql
-  #   runs-on: ubuntu-24.04
-  #   needs:
-  #     - build
-  #   permissions:
-  #     actions: read
-  #     contents: read
-  #     security-events: write
-
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       language: ["python"]
-
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-
-  #     # Initializes the CodeQL tools for scanning.
-  #     - name: Initialize CodeQL
-  #       uses: github/codeql-action/init@v3
-  #       with:
-  #         languages: ${{ matrix.language }}
-  #         # If you wish to specify custom queries, you can do so here or in a config file.
-  #         # By default, queries listed here will override any specified in a config file.
-  #         # Prefix the list here with "+" to use these queries and those in the config file.
-
-  #         # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-  #         # queries: security-extended,security-and-quality
-
-  #     - name: Autobuild
-  #       uses: github/codeql-action/autobuild@v3
-
-  #     - name: Perform CodeQL Analysis
-  #       uses: github/codeql-action/analyze@v3
-  #       with:
-  #         category: "/language:${{matrix.language}}"
-
-  check: # This job does nothing and is only used for the branch protection
-    if: always()
-    permissions:
-      pull-requests: write # allow to comment on pull-request
-
-    needs:
-      - build
-
-    runs-on: ubuntu-24.04
-
-    steps:
-      - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@release/v1
-        with:
-          jobs: ${{ toJSON(needs) }}
+  tox:
+    uses: ansible/team-devtools/.github/workflows/tox.yml@main
+    secrets: inherit
+    with:
+      min_python: "3.12"
+      default_python: "3.12"
+      max_python: "3.14"
+      other_names: |
+        lint
+        hooks
+      platforms: linux,macos

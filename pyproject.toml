@@ -199,7 +199,7 @@ commands = [
 ]
 
 [tool.tox.env_run_base]
-description = "Run the tests under {base_python}"
+description = """Run the tests: py{py_dot_ver}"""
 dependency_groups = ["dev"]
 commands_pre = [
   ["sh", "-c", "rm -f {env_dir}/.coverage.* 2>/dev/null || true"],
@@ -215,7 +215,8 @@ commands = [
     "-m",
     "pytest",
     {default = ["-v", "-n", "0", "--durations=10", "--doctest-modules", "--showlocals", "-ra"], extend = true, replace = "posargs"}
-  ]
+  ],
+  ["{tox_root}/tools/report-coverage"]
 ]
 pass_env = [
   "CURL_CA_BUNDLE", # https proxies, https://github.com/tox-dev/tox/issues/1437
@@ -243,7 +244,8 @@ allowlist_externals = [
   "rm",
   "sh",
   "tox",
-  "{tox_root}/tools/test-hooks.sh"
+  "{tox_root}/tools/test-hooks.sh",
+  "{tox_root}/tools/report-coverage"
 ]
 # https://tox.wiki/en/latest/upgrading.html#editable-mode
 package = "editable"
