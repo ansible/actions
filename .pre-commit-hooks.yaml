@@ -11,7 +11,7 @@
   types_or: [python, pyi, jupyter]
   pass_filenames: false
   description: This hook runs ruff check and ruff format
-  entry: uv run -q --python=3.13 --group lint ruff check --force-exclude && uv run -q --python=3.13 --group lint ruff format --force-exclude
+  entry: sh -c "uv run -q --python=3.13 --group lint ruff check --force-exclude && uv run -q --python=3.13 --group lint ruff format --force-exclude"
 - id: mypy
   name: mypy
   description: This hook runs mypy

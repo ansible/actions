@@ -14,7 +14,9 @@ mkdir -p .tox/x
 cd .tox/x
 git init --initial-branch=main
 # we add a file to the repo to avoid error due to no file to to lint
+mkdir -p src
 touch foo.yml
-touch bar.py
-git add foo.yml
-python3 -m pre_commit try-repo -v "${DIR}/.."
+touch src/__init__.py
+touch src/bar.py
+git add .
+python3 -m pre_commit try-repo -a -v "${DIR}/.."
