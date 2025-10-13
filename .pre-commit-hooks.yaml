@@ -13,6 +13,17 @@
   language: system
   pass_filenames: false
   types_or: [toml]
+- id: md
+  name: markdown (md)
+  description: Runs markdownlint-cli2 with fix
+  language: node
+  pass_filenames: false
+  types: [markdown]
+  additional_dependencies:
+    - markdownlint-cli2
+    - markdownlint-cli2-formatter-pretty
+    - markdownlint-cli2-formatter-summarize
+  entry: markdownlint-cli2 --fix "**/.*.md"
 - id: ruff
   name: ruff
   language: system

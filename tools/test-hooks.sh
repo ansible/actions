@@ -16,6 +16,7 @@ git init --initial-branch=main
 # we add a file to the repo to avoid error due to no file to to lint
 mkdir -p src
 touch foo.yml
+touch README.md
 touch src/__init__.py
 touch src/bar.py
 git add .
