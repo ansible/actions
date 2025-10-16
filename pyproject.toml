@@ -83,6 +83,9 @@ ignore_missing_imports = true
 implicit_reexport = true
 ignore_errors = true
 
+[tool.pylint.main]
+ignore-paths=".tox|.venv|node_modules"
+
 [tool.pyright]
 include = ["src"]
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md#sample-pyprojecttoml-file
