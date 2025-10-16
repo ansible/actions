@@ -38,6 +38,13 @@
   language: system
   types_or: [python, pyi]
   pass_filenames: false
+- id: pylint
+  name: pylint
+  description: This hook runs pylint
+  entry: uv run -q --python=3.13 --group lint pylint
+  language: system
+  types_or: [python, pyi]
+  require_serial: true
 - id: ansible-lint
   # keep name lowercase for consistency with other hook names
   name: ansible-lint

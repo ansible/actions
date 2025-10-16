@@ -14,10 +14,13 @@ mkdir -p .tox/x
 cd .tox/x
 git init --initial-branch=main
 # we add a file to the repo to avoid error due to no file to to lint
+uv init --name test-hooks --no-workspace --app --bare
+uv add --group lint pylint mypy ruff tombi ansible-lint
+uv run tombi format pyproject.toml
 mkdir -p src
 touch foo.yml
 touch README.md
 touch src/__init__.py
-touch src/bar.py
+touch src/logging.py
 git add .
 python3 -m pre_commit try-repo -a -v "${DIR}/.."
