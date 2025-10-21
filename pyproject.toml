@@ -4,14 +4,17 @@
 name = "ansible-actions"
 requires-python = ">=3.12"
 dependencies = [
-  "actions-toolkit>=0.1.15",
-  "ansible-lint>=25.9.0",
   "uv>=0.9.4",
 ]
 dynamic = ["version"]
 
 [project.scripts]
 dynamic-matrix = "dynamic_matrix.__main__:main"
+
+[project.optional-dependencies]
+action = [
+  "actions-toolkit>=0.1.15",
+]
 
 [dependency-groups]
 dev = [
@@ -21,6 +24,7 @@ dev = [
   "pytest >= 7.2.2",
 ]
 lint = [
+  "ansible-lint>=25.9.2",
   "mypy>=1.18.2",
   "pre-commit>=3.5.0",
   "pre-commit-uv>=4.1.4",
@@ -144,6 +148,7 @@ norecursedirs = [
   "collections",
   "dist",
   "docs",
+  "node_modules",
 ]
 python_files = [
   "test_*.py",
@@ -201,7 +206,7 @@ description = "Run the tests in a container"
 skip_install = true
 commands = [
   ["docker", "build", "-t", "ansible-actions", "."],
-  ["docker", "run", "-it", "--rm", "ansible-actions"],
+  ["docker", "run", "-i", "--rm", "ansible-actions"],
 ]
 allowlist_externals = ["docker", "sh"]
 
@@ -214,6 +219,7 @@ commands = [["pre-commit", "run", "--all-files", "--show-diff-on-failure"]]
 [tool.tox.env_run_base]
 description = """Run the tests: py{py_dot_ver}"""
 dependency_groups = ["dev"]
+extras = ["action"]
 commands_pre = [
   ["sh", "-c", "rm -f {env_dir}/.coverage.* 2>/dev/null || true"],
   # safety measure to assure we do not accidentally run tests with broken dependencies

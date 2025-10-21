@@ -38,4 +38,5 @@ jobs:
       other_names: |
         lint
         hooks
+        image
       platforms: linux,macos
