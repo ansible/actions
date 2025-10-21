@@ -14,7 +14,6 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_call:
-
 concurrency:
   # Avoids canceling push to main of the same commit (github.sha) but will
   # cancel running builds when you update the source branch of a PR.

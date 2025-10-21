@@ -6,7 +6,6 @@ name: release
   release:
     types: [published, edited]
   workflow_dispatch:
-
 jobs:
   actions-tagger:
     runs-on: windows-latest

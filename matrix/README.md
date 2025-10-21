@@ -5,11 +5,13 @@ projects using:
 
 - `python` and `tox`
 
-## Supported optional arguments:
+## Supported optional arguments
 
-- `min_python` - Minimal version of python to be tested against, default is `"3.8"`. The maximum value is currently `"3.14"`
+- `min_python` - Minimal version of python to be tested against, default is
+  `"3.8"`. The maximum value is currently `"3.14"`
 - `other_names`- A list of other tox environments to include in the matrix. We
-  plan to read them from [envlist](https://tox.wiki/en/latest/config.html#envlist) field in `tox.ini`.
+  plan to read them from [envlist](https://tox.wiki/en/latest/config.html#envlist)
+  field in `tox.ini`.
 - `platforms` - Default to `linux` only but can be `linux`, `windows`, `macos`
   or a combination of them (comma separated).
 - `linux`: matrix expansion strategy for Linux, `full` or `minmax`.
@@ -38,13 +40,14 @@ the following fields:
 - `name` of the job to run
 
 - `command`, and optional `command2`, `command3`, ... which are the commands
-  to be executed using `run: ` step.
+  to be executed using `run:` step.
 
 - `python_version` is a string compatible with the expected format used by
-  [actions/setup-python](https://github.com/actions/setup-python) github action,
-  like `3.12` or `3.11\n3.12` when multiple python versions are to be installed.
+  [actions/setup-python](https://github.com/actions/setup-python) github
+  action, like `3.12` or `3.11\n3.12` when multiple python versions are to be
+  installed.
 
-- `os` the name of an github runner, should be passed to `runs_on: `
+- `os` the name of an github runner, should be passed to `runs_on:`
 
 ## Examples
 
@@ -117,33 +120,48 @@ jobs:
 
 ### Which projects using tox would benefit from this GitHub Action?
 
-If your tox [envlist](https://tox.wiki/en/latest/config.html#envlist) is simple, like `lint,packaging,py{36,37,38,39}` you are among the best candidates to make use of it as that is the primary usage case it covers. If you use environments combining multiple factors, you will need to specify them in `other_names` argument.
+If your tox [envlist](https://tox.wiki/en/latest/config.html#envlist) is
+simple, like `lint,packaging,py{36,37,38,39}` you are among the best candidates
+to make use of it as that is the primary usage case it covers. If you use
+environments combining multiple factors, you will need to specify them in
+`other_names` argument.
 
-### Why this action does not just load <tt>envlist</tt> values?
+### Why this action does not just load `envlist` values?
 
-We plan to add support for this in the future but it might not be
-as simple as one would assume. For historical reasons, `envlist` does very often already include Python versions instead of generic `py` entry or
-they are outdated. The repository code is not available at the
-time this action runs.
+We plan to add support for this in the future but it might not be as simple as
+one would assume. For historical reasons, `envlist` does very often already
+include Python versions instead of generic `py` entry or they are outdated.
+The repository code is not available at the time this action runs.
 
 ### Why only Linux testing is enabled by default?
 
-Linux runners are the fastest ones and many Python projects do not need to support platforms like Windows or macOS. That is why the default platform contains only lines. Still, you can enable all of them by specifying `platforms: linux,windows,macos` in the action arguments.
+Linux runners are the fastest ones and many Python projects do not need to
+support platforms like Windows or macOS. That is why the default platform
+contains only lines. Still, you can enable all of them by specifying
+`platforms: linux,windows,macos` in the action arguments.
 
 ### Why Windows and MacOS matrix expansion strategy is different than the Linux one?
 
-The defaults for macOS and Windows are `minmax` while for Linux is `full`. This limit resource usage low while still providing a good level of testing. If your pythons are `py38,py39,py310,py311` unless you specify `windows: full` you will see only two Windows based jobs in the generated matrix: py38 and py311.
+The defaults for macOS and Windows are `minmax` while for Linux is `full`. This
+limit resource usage low while still providing a good level of testing. If your
+pythons are `py38,py39,py310,py311` unless you specify `windows: full` you will
+see only two Windows based jobs in the generated matrix: py38 and py311.
 
-### Why is <tt>other_names</tt> a multiline string instead of being a comma-separated one?
+### Why is `other_names` a multiline string instead of being a comma-separated one?
 
-We wanted to allow users to chain (group) multiple tox environments in a single command like `tox run -e lint,packaging`, and this means that we needed to allow users to use commas as part of a valid name, without
-splitting on it.
+We wanted to allow users to chain (group) multiple tox environments in a single
+command like `tox run -e lint,packaging`, and this means that we needed to
+allow users to use commas as part of a valid name, without splitting on it.
 
-### How to use custom test commands for some jobs.
+### How to use custom test commands for some jobs
 
-In v3 we allow users to add entries like `py39-all:tox -f py39` inside `other-names`. This would be translated into returning the job name `py39-all` and the command `tox -f py39`.
+In v3 we allow users to add entries like `py39-all:tox -f py39` inside
+`other-names`. This would be translated into returning the job name `py39-all`
+and the command `tox -f py39`.
 
-This is especially useful as it allows users to make use of labels (`-m`) and factor filtering (`-f`) to select groups of tox environments instead of just using the environments (`-e`) selector.
+This is especially useful as it allows users to make use of labels (`-m`) and
+factor filtering (`-f`) to select groups of tox environments instead of just
+using the environments (`-e`) selector.
 
 This allows running other test frameworks instead of tox.
 
@@ -171,11 +189,3 @@ steps:
   - run: "${{ matrix.command2 }}"
     if: "${{ matrix.command2 || false }}"
 ```
-
-### How to use custom test commands for some jobs.
-
-In v3 we allow users to add entries like `py39-all:tox -f py39` inside `other-names`. This would translated into returning the job name `py39-all` and the command `tox -f py39`.
-
-This is especially useful as it allows users to make use of labels (`-m`) and factor filtering (`-f`) to select groups of tox environments instead of just using the environments (`-e`) selector.
-
-This allows running other test frameworks instead of tox.
