@@ -6,3 +6,6 @@ run = "LOG_LEVEL=info RENOVATE_X_SQLITE_PACKAGE_CACHE=true RENOVATE_CONFIG_FILE=
 [tools]
 python = "latest"
 uv = "latest"
+
+[settings]
+python.uv_venv_auto = true
