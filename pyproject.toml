@@ -3,7 +3,11 @@
 [project]
 name = "ansible-actions"
 requires-python = ">=3.12"
-dependencies = ["actions-toolkit>=0.1.15", "ansible-lint>=25.9.0"]
+dependencies = [
+  "actions-toolkit>=0.1.15",
+  "ansible-lint>=25.9.0",
+  "uv>=0.9.4",
+]
 dynamic = ["version"]
 
 [project.scripts]

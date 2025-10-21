@@ -25,6 +25,7 @@ source = { editable = "." }
 dependencies = [
     { name = "actions-toolkit" },
     { name = "ansible-lint" },
+    { name = "uv" },
 ]
 
 [package.dev-dependencies]
@@ -47,6 +48,7 @@ lint = [
 requires-dist = [
     { name = "actions-toolkit", specifier = ">=0.1.15" },
     { name = "ansible-lint", specifier = ">=25.9.0" },
+    { name = "uv", specifier = ">=0.9.4" },
 ]
 
 [package.metadata.requires-dev]
