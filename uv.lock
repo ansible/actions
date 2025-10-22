@@ -23,9 +23,12 @@ wheels = [
 name = "ansible-actions"
 source = { editable = "." }
 dependencies = [
-    { name = "actions-toolkit" },
-    { name = "ansible-lint" },
     { name = "uv" },
+]
+
+[package.optional-dependencies]
+action = [
+    { name = "actions-toolkit" },
 ]
 
 [package.dev-dependencies]
@@ -36,6 +39,7 @@ dev = [
     { name = "pytest-xdist" },
 ]
 lint = [
+    { name = "ansible-lint" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pre-commit-uv" },
@@ -46,10 +50,10 @@ lint = [
 
 [package.metadata]
 requires-dist = [
-    { name = "actions-toolkit", specifier = ">=0.1.15" },
-    { name = "ansible-lint", specifier = ">=25.9.0" },
+    { name = "actions-toolkit", marker = "extra == 'action'", specifier = ">=0.1.15" },
     { name = "uv", specifier = ">=0.9.4" },
 ]
+provides-extras = ["action"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -59,6 +63,7 @@ dev = [
     { name = "pytest-xdist", specifier = ">=2.1.0" },
 ]
 lint = [
+    { name = "ansible-lint", specifier = ">=25.9.2" },
     { name = "mypy", specifier = ">=1.18.2" },
     { name = "pre-commit", specifier = ">=3.5.0" },
     { name = "pre-commit-uv", specifier = ">=4.1.4" },
