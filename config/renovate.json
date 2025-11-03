@@ -36,7 +36,7 @@
     "enabled": true,
     "groupName": "all dependencies",
     "groupSlug": "all",
-    "rangeStrategy": "update-lockfile",
+    "rangeStrategy": "replace",
     "rebaseWhen": "behind-base-branch",
     "recreateWhen": "always"
   },
