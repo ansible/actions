@@ -25,6 +25,7 @@ dev = [
 ]
 lint = [
   "ansible-lint>=25.9.2",
+  "codespell[toml]>=2.4.1",
   "mypy>=1.18.2",
   "pre-commit>=3.5.0",
   "pre-commit-uv>=4.1.4",
@@ -32,6 +33,7 @@ lint = [
   "ruff>=0.14.0",
   "shellcheck-py>=0.11.0.1",
   "tombi>=0.6.25",
+  "yamllint>=1.37.1",
 ]
 
 [build-system]
@@ -42,7 +44,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.codespell]
-skip = ".tox,.mypy_cache,build,.git,.eggs,pip-wheel-metadata"
+skip = ".tox,.mypy_cache,build,.git,.eggs,pip-wheel-metadata,node_modules,package-lock.json,uv.lock"
 
 # Keep this default because xml/report do not know to use load it from config file:
 # data_file = ".coverage"

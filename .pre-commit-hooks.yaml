@@ -60,3 +60,17 @@
   entry: uv run -q --group lint shellcheck
   types: [shell]
   require_serial: true # shellcheck can detect sourcing this way
+- id: codespell
+  name: codespell
+  language: system
+  description: Test shell scripts with shellcheck
+  entry: uv run -q --group lint codespell -x
+  types: [text]
+  require_serial: true # shellcheck can detect sourcing this way
+  pass_filenames: true
+- id: yamllint
+  name: yamllint
+  language: system
+  files: \.(yaml|yml)$
+  types: [file, yaml]
+  entry: uv run -q --group lint yamllint --strict
