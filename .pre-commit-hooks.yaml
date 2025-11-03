@@ -53,3 +53,10 @@
   entry: uv run -q --isolated --python='>=3.13,<3.14' --group=lint -m ansiblelint --fix -v --force-color
   language: system
   pass_filenames: false
+- id: shellcheck
+  name: shellcheck
+  language: system
+  description: Test shell scripts with shellcheck
+  entry: uv run -q --group lint shellcheck
+  types: [shell]
+  require_serial: true # shellcheck can detect sourcing this way
