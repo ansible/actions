@@ -67,7 +67,7 @@
   entry: uv run -q --group lint codespell
   types: [text]
   require_serial: true # shellcheck can detect sourcing this way
-  pass_filenames: true
+  pass_filenames: false # otherwise ignore option will not be used
 - id: yamllint
   name: yamllint
   language: system
