@@ -40,6 +40,7 @@ dev = [
 ]
 lint = [
     { name = "ansible-lint" },
+    { name = "codespell" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pre-commit-uv" },
@@ -47,6 +48,7 @@ lint = [
     { name = "ruff" },
     { name = "shellcheck-py" },
     { name = "tombi" },
+    { name = "yamllint" },
 ]
 
 [package.metadata]
@@ -65,6 +67,7 @@ dev = [
 ]
 lint = [
     { name = "ansible-lint", specifier = ">=25.9.2" },
+    { name = "codespell", extras = ["toml"], specifier = ">=2.4.1" },
     { name = "mypy", specifier = ">=1.18.2" },
     { name = "pre-commit", specifier = ">=3.5.0" },
     { name = "pre-commit-uv", specifier = ">=4.1.4" },
@@ -72,6 +75,7 @@ lint = [
     { name = "ruff", specifier = ">=0.14.0" },
     { name = "shellcheck-py", specifier = ">=0.11.0.1" },
     { name = "tombi", specifier = ">=0.6.25" },
+    { name = "yamllint", specifier = ">=1.37.1" },
 ]
 
 [[package]]
@@ -329,6 +333,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/46/61/de6cd827efad202d7057d93e0fed9294b96952e188f7384832791c7b2254/click-8.3.0.tar.gz", hash = "sha256:e7b8232224eba16f4ebe410c25ced9f7875cb5f3263ffc93cc3e8da705e229c4", size = 276943, upload-time = "2025-09-18T17:32:23.696Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/db/d3/9dcc0f5797f070ec8edf30fbadfb200e71d9db6b84d211e3b2085a7589a0/click-8.3.0-py3-none-any.whl", hash = "sha256:9b9f285302c6e3064f4330c05f05b81945b2a39544279343e6e7c5f27a9baddc", size = 107295, upload-time = "2025-09-18T17:32:22.42Z" },
+]
+
+[[package]]
+name = "codespell"
+version = "2.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/15/e0/709453393c0ea77d007d907dd436b3ee262e28b30995ea1aa36c6ffbccaf/codespell-2.4.1.tar.gz", hash = "sha256:299fcdcb09d23e81e35a671bbe746d5ad7e8385972e65dbb833a2eaac33c01e5", size = 344740, upload-time = "2025-01-28T18:52:39.411Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/20/01/b394922252051e97aab231d416c86da3d8a6d781eeadcdca1082867de64e/codespell-2.4.1-py3-none-any.whl", hash = "sha256:3dadafa67df7e4a3dbf51e0d7315061b80d265f9552ebd699b3dd6834b47e425", size = 344501, upload-time = "2025-01-28T18:52:37.057Z" },
 ]
 
 [[package]]
