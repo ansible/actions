@@ -16,7 +16,7 @@ ci:
     - renovate-config-validator # container limits
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.9.7
+    rev: 0.9.8
     hooks:
       - id: uv-sync
       - id: uv-lock
@@ -27,13 +27,13 @@ repos:
         args: ["--upgrade"]
         stages: [manual]
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 41.168.1
+    rev: 42.1.3
     hooks:
       - id: renovate-config-validator
         alias: renovate
         args: [--strict]
   - repo: https://github.com/biomejs/pre-commit
-    rev: "v2.3.2"
+    rev: "v2.3.4"
     hooks:
       - id: biome-check
         name: biome
@@ -62,7 +62,7 @@ repos:
       - id: debug-statements
         language_version: python3
   - repo: https://github.com/tombi-toml/tombi-pre-commit
-    rev: v0.6.39
+    rev: v0.6.42
     hooks:
       - id: tombi-format
         alias: toml
@@ -70,7 +70,7 @@ repos:
         alias: toml
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.3
+    rev: v0.14.4
     hooks:
       - id: ruff-format
         alias: ruff
