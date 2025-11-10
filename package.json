@@ -1,8 +1,8 @@
 {
   "dependencies": {
     "markdownlint-cli2": "^0.18.1",
-    "markdownlint-cli2-formatter-pretty": "^0.0.8",
-    "markdownlint-cli2-formatter-summarize": "^0.0.7"
+    "markdownlint-cli2-formatter-pretty": "^0.0.9",
+    "markdownlint-cli2-formatter-summarize": "^0.0.8"
   },
   "name": "ansible-actions",
   "version": "0.0.1"
