@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "markdownlint-cli2": "^0.18.1",
+    "markdownlint-cli2": "^0.19.0",
     "markdownlint-cli2-formatter-pretty": "^0.0.9",
     "markdownlint-cli2-formatter-summarize": "^0.0.8"
   },
