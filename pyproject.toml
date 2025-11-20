@@ -1,4 +1,5 @@
-# cspell: ignore addopts conftest minversion pyargs posargs PYTHONPYCACHEPREFIX PYTHONIOENCODING PYTHONBREAKPOINT
+# cspell: ignore addopts conftest minversion pyargs posargs PYTHONPYCACHEPREFIX PYTHONIOENCODING PYTHONBREAKPOINT tombi
+#:tombi schema.strict = false
 
 [project]
 name = "ansible-actions"
