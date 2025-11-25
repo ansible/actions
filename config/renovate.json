@@ -18,6 +18,10 @@
   "github-actions": {
     "branchTopic": "all",
     "enabled": true,
+    "managerFilePatterns": [
+      "(^|/)(workflow-templates|\\.github/workflows)/[^/]+\\.ya?ml$",
+      "(^|/)action\\.ya?ml$"
+    ],
     "packageRules": [
       {
         "matchPackageNames": [
