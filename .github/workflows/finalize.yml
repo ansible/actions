@@ -3,7 +3,7 @@ name: finalize
 on:
   workflow_run:
     workflows:
-      - tox
+      - test
     types:
       - completed
 

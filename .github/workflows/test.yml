@@ -1,0 +1,336 @@
+---
+# cspell: ignore amet automount WSLENV
+name: test
+
+on:
+  merge_group:
+    branches:
+      - "main"
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_call:
+concurrency:
+  # Avoids canceling push to main of the same commit (github.sha) but will
+  # cancel running builds when you update the source branch of a PR.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref_name }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  checks: read
+  contents: write
+  id-token: write
+  packages: write
+  pull-requests: write
+
+jobs:
+  tox:
+    uses: ansible/team-devtools/.github/workflows/tox.yml@main
+    secrets: inherit
+    with:
+      min_python: "3.12"
+      default_python: "3.12"
+      max_python: "3.14"
+      other_names: |
+        lint
+        hooks
+        image
+      platforms: linux,macos
+
+  matrix:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+      - name: Self test 'matrix' action
+        uses: ./matrix
+
+  upload-artifact:
+    name: upload-artifact-${{ matrix.name || matrix.runs-on }}
+    env:
+      # ACTIONS_RUNNER_DEBUG: "true"
+      # ACTIONS_STEP_DEBUG: "true"
+      # https://docs.github.com/en/actions/learn-github-actions/environment-variables
+      # https://devblogs.microsoft.com/commandline/share-environment-vars-between-wsl-and-windows/
+      WSLENV:
+        HOSTNAME:CI:FORCE_COLOR:GITHUB_ACTION:GITHUB_ACTION_PATH/p:GITHUB_ACTION_REPOSITORY:GITHUB_WORKFLOW:GITHUB_WORKSPACE/p:GITHUB_PATH/p:GITHUB_ENV/p:VIRTUAL_ENV/p:SKIP_PODMAN:SKIP_DOCKER:NODE_OPTIONS
+      # We define a hostname because otherwise the variable might not always be accessible on runners.
+      HOSTNAME: gha
+    defaults:
+      run:
+        shell: ${{ contains(matrix.name, 'wsl') && 'wsl-bash {0}' || 'bash' }}
+    strategy:
+      matrix:
+        # runs-on: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, windows-2025]
+        include:
+          - runs-on: windows-2025
+            name: windows-2025
+          - runs-on: windows-2025
+            name: windows-2025-wsl
+          - runs-on: ubuntu-24.04
+            name: ubuntu-24.04
+          - runs-on: ubuntu-24.04-arm
+            name: ubuntu-24.04-arm
+          - runs-on: macos-15
+            name: macos-15
+      fail-fast: false
+
+    runs-on: ${{ matrix.runs-on }}
+
+    steps:
+      # https://github.com/marketplace/actions/setup-wsl
+      - name: Activate WSL
+        if: contains(matrix.name, 'wsl') && (matrix.runs-on || '') != 'self-hosted'
+        uses: Vampire/setup-wsl@v6.0.0
+        with:
+          distribution: Ubuntu-24.04
+          set-as-default: "true"
+          # '-i' seems to be the only option that loads .bashrc file that we need
+          # https://github.com/Vampire/setup-wsl/discussions/54
+          wsl-shell-command: "bash -i -eo pipefail"
+          # https://github.com/MicrosoftDocs/WSL/blob/main/WSL/wsl-config.md#L159
+          wsl-conf: |
+            [automount]
+            enabled = true
+            root = /
+            options = "metadata,umask=077"
+            [boot]
+            command=/etc/init.d/dbus start
+            [interop]
+            enabled = false
+            appendWindowsPath = false
+            [network]
+            hostname = wsl
+          additional-packages: curl
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install the latest version of uv
+        if: ${{ runner.os != 'Windows' }}
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          ignore-nothing-to-cache: true
+
+      - uses: actions/cache@v4
+        if: ${{ runner.os != 'Windows' }}
+        with:
+          path: ~/.cache/pre-commit/
+          key: pre-commit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
+
+      - name: Lint
+        if: ${{ runner.os != 'Windows' }}
+        # See https://github.com/rhysd/actionlint/issues/555
+        run: ${{ runner.os == 'Linux' && runner.arch == 'ARM64' && 'SKIP=actionlint ' || '' }}uvx --with pre-commit-uv pre-commit run --all-files
+
+      # Test end-to-end by uploading a few artifacts and then downloading them
+      - name: Create artifact files
+        run: |
+          mkdir -p path/to/dir-1
+          mkdir -p path/to/dir-2
+          mkdir -p path/to/dir-3
+          mkdir -p symlink/
+          echo "Lorem ipsum dolor sit amet" > path/to/dir-1/file1.txt
+          echo "Hello world from file #2" > path/to/dir-2/file2.txt
+ # shell: bash
+
+      - name: Create artifact files (symlinks)
+        if: ${{ !contains(matrix.name, 'wsl') }}
+        run: |
+          echo "Hello from a symlinked file" > symlink/original.txt
+          ln -s "$(pwd)/symlink/original.txt" symlink/abs.txt
+          ln -s original.txt symlink/rel.txt
+
+      # Upload a single file artifact
+      - name: "Upload artifact #1"
+        uses: ./upload-artifact
+        with:
+          name: "Artifact-A-${{ matrix.name }}"
+          path: path/to/dir-1/file1.txt
+
+      # Upload using a wildcard pattern
+      - name: "Upload artifact #2"
+        uses: ./upload-artifact
+        with:
+          name: "Artifact-Wildcard-${{ matrix.name }}"
+          path: path/**/dir*/
+
+      # Upload a multi-path artifact
+      - name: "Upload artifact #3"
+        uses: ./upload-artifact
+        with:
+          name: "Multi-Path-Artifact-${{ matrix.name }}"
+          path: |
+            path/to/dir-1/*
+            path/to/dir-[23]/*
+            !path/to/dir-3/*.txt
+
+      - name: "Upload symlinked artifact"
+        if: ${{ !contains(matrix.name, 'wsl') }}
+        uses: ./upload-artifact
+        with:
+          name: "Symlinked-Artifact-${{ matrix.name }}"
+          path: |
+            symlink/abs.txt
+            symlink/rel.txt
+
+      # Download Artifact #1 and verify the correctness of the content
+      - name: "Download artifact #1"
+        uses: actions/download-artifact@v4
+        with:
+          name: "Artifact-A-${{ matrix.name }}"
+          path: some/new/path
+
+      - name: "Verify Artifact #1"
+        run: |
+          $file = "some/new/path/file1.txt"
+          if(!(Test-Path -path $file))
+          {
+              Write-Error "Expected file does not exist"
+          }
+          if(!((Get-Content $file) -ceq "Lorem ipsum dolor sit amet"))
+          {
+              Write-Error "File contents of downloaded artifact are incorrect"
+          }
+        shell: pwsh
+
+      # Download Artifact #2 and verify the correctness of the content
+      - name: "Download artifact #2"
+        uses: actions/download-artifact@v4
+        with:
+          name: "Artifact-Wildcard-${{ matrix.name }}"
+          path: some/other/path
+
+      - name: "Verify Artifact #2"
+        run: |
+          $file1 = "some/other/path/to/dir-1/file1.txt"
+          $file2 = "some/other/path/to/dir-2/file2.txt"
+          if(!(Test-Path -path $file1) -or !(Test-Path -path $file2))
+          {
+              Write-Error "Expected files do not exist"
+          }
+          if(!((Get-Content $file1) -ceq "Lorem ipsum dolor sit amet") -or !((Get-Content $file2) -ceq "Hello world from file #2"))
+          {
+              Write-Error "File contents of downloaded artifacts are incorrect"
+          }
+        shell: pwsh
+
+      # Download Artifact #3 and verify the correctness of the content
+      - name: "Download artifact #3"
+        uses: actions/download-artifact@v4
+        with:
+          name: "Artifact-Wildcard-${{ matrix.name }}"
+          path: verify-artifact-3
+
+      - name: "Verify Artifact #3"
+        run: |
+          $file1 = "verify-artifact-3/to/dir-1/file1.txt"
+          $file2 = "verify-artifact-3/to/dir-2/file2.txt"
+          if(!(Test-Path -path $file1) -or !(Test-Path -path $file2))
+          {
+              Write-Error "Expected files do not exist"
+          }
+          if(!((Get-Content $file1) -ceq "Lorem ipsum dolor sit amet") -or !((Get-Content $file2) -ceq "Hello world from file #2"))
+          {
+              Write-Error "File contents of downloaded artifacts are incorrect"
+          }
+        shell: pwsh
+
+      # Download Artifact #4 and verify the correctness of the content
+      - name: "Download artifact #4"
+        uses: actions/download-artifact@v4
+        with:
+          name: "Multi-Path-Artifact-${{ matrix.name }}"
+          path: multi/artifact
+
+      - name: "Verify Artifact #4"
+        run: |
+          $file1 = "multi/artifact/dir-1/file1.txt"
+          $file2 = "multi/artifact/dir-2/file2.txt"
+          if(!(Test-Path -path $file1) -or !(Test-Path -path $file2))
+          {
+              Write-Error "Expected files do not exist"
+          }
+          if(!((Get-Content $file1) -ceq "Lorem ipsum dolor sit amet") -or !((Get-Content $file2) -ceq "Hello world from file #2"))
+          {
+              Write-Error "File contents of downloaded artifacts are incorrect"
+          }
+        shell: pwsh
+
+      - name: "Download symlinked artifact"
+        if: ${{ !contains(matrix.name, 'wsl') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: "Symlinked-Artifact-${{ matrix.name }}"
+          path: from/symlink
+
+      - name: "Verify symlinked artifact"
+        if: ${{ !contains(matrix.name, 'wsl') }}
+        run: |
+          $abs = "from/symlink/abs.txt"
+          if(!(Test-Path -path $abs))
+          {
+              Write-Error "Expected file does not exist"
+          }
+          if(!((Get-Content $abs) -ceq "Hello from a symlinked file"))
+          {
+              Write-Error "File contents of downloaded artifact are incorrect"
+          }
+          $rel = "from/symlink/rel.txt"
+          if(!(Test-Path -path $rel))
+          {
+              Write-Error "Expected file does not exist"
+          }
+          if(!((Get-Content $rel) -ceq "Hello from a symlinked file"))
+          {
+              Write-Error "File contents of downloaded artifact are incorrect"
+          }
+        shell: pwsh
+
+      - name: "Alter file 1 content"
+        run: |
+          echo "This file has changed" > path/to/dir-1/file1.txt
+
+      # Replace the contents of Artifact #1
+      - name: "Overwrite artifact #1"
+        uses: ./upload-artifact
+        with:
+          name: "Artifact-A-${{ matrix.name }}"
+          path: path/to/dir-1/file1.txt
+          overwrite: true
+
+      # Download replaced Artifact #1 and verify the correctness of the content
+      - name: "Download artifact #1 again"
+        uses: actions/download-artifact@v4
+        with:
+          name: "Artifact-A-${{ matrix.name }}"
+          path: overwrite/some/new/path
+
+      - name: "Verify Artifact #1 again"
+        run: |
+          $file = "overwrite/some/new/path/file1.txt"
+          if(!(Test-Path -path $file))
+          {
+              Write-Error "Expected file does not exist"
+          }
+          if(!((Get-Content $file) -ceq "This file has changed"))
+          {
+              Write-Error "File contents of downloaded artifact are incorrect"
+          }
+        shell: pwsh
+
+  check:
+    needs:
+      - tox
+      - matrix
+      - upload-artifact
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check
+        run: |
+          echo "Check"
