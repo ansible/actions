@@ -108,11 +108,11 @@ jobs:
           additional-packages: curl
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install the latest version of uv
         if: ${{ runner.os != 'Windows' }}
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
           ignore-nothing-to-cache: true
@@ -181,7 +181,7 @@ jobs:
 
       # Download Artifact #1 and verify the correctness of the content
       - name: "Download artifact #1"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: "Artifact-A-${{ matrix.name }}"
           path: some/new/path
@@ -201,7 +201,7 @@ jobs:
 
       # Download Artifact #2 and verify the correctness of the content
       - name: "Download artifact #2"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: "Artifact-Wildcard-${{ matrix.name }}"
           path: some/other/path
@@ -222,7 +222,7 @@ jobs:
 
       # Download Artifact #3 and verify the correctness of the content
       - name: "Download artifact #3"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: "Artifact-Wildcard-${{ matrix.name }}"
           path: verify-artifact-3
@@ -243,7 +243,7 @@ jobs:
 
       # Download Artifact #4 and verify the correctness of the content
       - name: "Download artifact #4"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: "Multi-Path-Artifact-${{ matrix.name }}"
           path: multi/artifact
@@ -264,7 +264,7 @@ jobs:
 
       - name: "Download symlinked artifact"
         if: ${{ !contains(matrix.name, 'wsl') }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: "Symlinked-Artifact-${{ matrix.name }}"
           path: from/symlink
@@ -306,7 +306,7 @@ jobs:
 
       # Download replaced Artifact #1 and verify the correctness of the content
       - name: "Download artifact #1 again"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: "Artifact-A-${{ matrix.name }}"
           path: overwrite/some/new/path
