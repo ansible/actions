@@ -14,6 +14,12 @@ then
   set -x
 fi
 
+# restore executable bit on cached binary if needed
+if [[ -f ~/.local/bin/gitleaks && ! -x ~/.local/bin/gitleaks ]]; then
+    echo "::debug::Restoring executable bit on cached binary ~/.local/bin/gitleaks"
+    chmod +x ~/.local/bin/gitleaks
+fi
+
 gitleaks_cmd=$(command -v gitleaks 2>/dev/null || find ~/.local/bin -name gitleaks -executable 2>/dev/null | head -1 || true)
 arch="$(uname)_$(uname -m)"
 platform=$(echo "$arch" | tr '[:upper:]' '[:lower:]' )
