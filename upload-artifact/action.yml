@@ -86,21 +86,7 @@ runs:
           ~/.local/bin/gitleaks
         key: gitleaks-${{ runner.os }}-${{ runner.arch }}
 
-    - name: Set executable bit on cached binary
-      if: steps.cache_gitleaks.outputs.cache-hit == 'true'
-      id: set-executable-bit
-      # with wsl even if cache is restored we might not have the executable restored
-      continue-on-error: true
-      run: |
-        set -euo pipefail
-        prefix=~/.local/bin
-        chmod +x $prefix/gitleaks
-        gitleaks --version
-      shell: bash
-
     - name: Ensure gitleaks
-      if: steps.cache_gitleaks.outputs.cache-hit != 'true' || steps.set-executable-bit.outcome != 'success'
-      # && runner.os == 'Linux'
       id: gitleaks
       shell: bash
       run: ${GITHUB_ACTION_PATH}/scripts/ensure-gitleaks.sh
