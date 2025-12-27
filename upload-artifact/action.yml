@@ -78,7 +78,7 @@ runs:
     - name: Cache gitleaks
       if: runner.os == 'Linux'
       id: cache_gitleaks
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           /usr/local/bin/gitleaks
@@ -103,7 +103,7 @@ runs:
       shell: bash
 
     - name: Upload safe artifact using original actions/upload-artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       id: upload-artifact
       with:
         name: ${{ inputs.name || 'artifact' }}
