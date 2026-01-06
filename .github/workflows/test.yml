@@ -45,7 +45,7 @@ jobs:
   matrix:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
       - name: Self test 'matrix' action
         uses: ./matrix
 
@@ -117,7 +117,7 @@ jobs:
           version: "latest"
           ignore-nothing-to-cache: true
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: ${{ runner.os != 'Windows' }}
         with:
           path: ~/.cache/pre-commit/
@@ -181,7 +181,7 @@ jobs:
 
       # Download Artifact #1 and verify the correctness of the content
       - name: "Download artifact #1"
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: "Artifact-A-${{ matrix.name }}"
           path: some/new/path
@@ -201,7 +201,7 @@ jobs:
 
       # Download Artifact #2 and verify the correctness of the content
       - name: "Download artifact #2"
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: "Artifact-Wildcard-${{ matrix.name }}"
           path: some/other/path
@@ -222,7 +222,7 @@ jobs:
 
       # Download Artifact #3 and verify the correctness of the content
       - name: "Download artifact #3"
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: "Artifact-Wildcard-${{ matrix.name }}"
           path: verify-artifact-3
@@ -243,7 +243,7 @@ jobs:
 
       # Download Artifact #4 and verify the correctness of the content
       - name: "Download artifact #4"
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: "Multi-Path-Artifact-${{ matrix.name }}"
           path: multi/artifact
@@ -264,7 +264,7 @@ jobs:
 
       - name: "Download symlinked artifact"
         if: ${{ !contains(matrix.name, 'wsl') }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: "Symlinked-Artifact-${{ matrix.name }}"
           path: from/symlink
@@ -306,7 +306,7 @@ jobs:
 
       # Download replaced Artifact #1 and verify the correctness of the content
       - name: "Download artifact #1 again"
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: "Artifact-A-${{ matrix.name }}"
           path: overwrite/some/new/path

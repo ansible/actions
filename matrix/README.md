@@ -140,7 +140,7 @@ support platforms like Windows or macOS. That is why the default platform
 contains only lines. Still, you can enable all of them by specifying
 `platforms: linux,windows,macos` in the action arguments.
 
-### Why Windows and MacOS matrix expansion strategy is different than the Linux one?
+### Why Windows and MacOS matrix expansion strategy differs from the Linux one?
 
 The defaults for macOS and Windows are `minmax` while for Linux is `full`. This
 limit resource usage low while still providing a good level of testing. If your
