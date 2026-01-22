@@ -1,5 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "addLabels": ["chore", "dependencies"],
   "automerge": true,
   "automergeStrategy": "squash",
   "branchTopic": "all",
@@ -34,9 +35,10 @@
   },
   "groupName": "all dependencies",
   "groupSlug": "all",
-  "labels": ["chore", "dependencies"],
   "lockFileMaintenance": {
+    "addLabels": ["{{{ manager }}}"],
     "commitMessageAction": "update",
+    "commitMessageExtra": "{{{ manager }}}",
     "enabled": true,
     "groupName": "all dependencies",
     "groupSlug": "all",
@@ -51,7 +53,15 @@
       "groupName": "all dependencies",
       "groupSlug": "all",
       "matchPackageNames": ["*"],
-      "minimumReleaseAge": "2 days"
+      "matchUpdateTypes": ["major"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "branchTopic": "all",
+      "groupName": "all dependencies",
+      "groupSlug": "all",
+      "matchPackageNames": ["*"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"]
     }
   ],
   "pin": {
