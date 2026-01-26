@@ -137,8 +137,7 @@ jobs:
           mkdir -p symlink/
           echo "Lorem ipsum dolor sit amet" > path/to/dir-1/file1.txt
           echo "Hello world from file #2" > path/to/dir-2/file2.txt
- # shell: bash
-
+      # shell: bash
       - name: Create artifact files (symlinks)
         if: ${{ !contains(matrix.name, 'wsl') }}
         run: |
@@ -323,7 +322,6 @@ jobs:
               Write-Error "File contents of downloaded artifact are incorrect"
           }
         shell: pwsh
-
   check:
     needs:
       - tox
@@ -331,6 +329,7 @@ jobs:
       - upload-artifact
     runs-on: ubuntu-24.04
     steps:
-      - name: Check
-        run: |
-          echo "Check"
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: "Run codecov-status"
+        uses: ./codecov-status
