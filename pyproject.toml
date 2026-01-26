@@ -199,6 +199,23 @@ requires = [
   "setuptools >= 65.3.0",  # editable installs
 ]
 
+[tool.tox.env.deps]
+commands = [
+  [
+    "pre-commit",
+    "run",
+    "--all-files",
+    "--show-diff-on-failure",
+    "--hook-stage",
+    "manual",
+    "deps",
+  ],
+  ["pre-commit", "autoupdate"],
+  ["tox", "-e", "lint"],
+]
+commands_pre = []
+description = "Bump all test dependencies"
+
 [tool.tox.env.hooks]
 commands = [["{tox_root}/tools/test-hooks.sh"]]
 dependency_groups = ["lint"]

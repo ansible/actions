@@ -1,0 +1,17 @@
+---
+name: codecov.io-status
+description: "Reports codecov status on a pull request"
+branding:
+  icon: activity
+  color: purple
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Run ansible-lint
+      shell: bash
+      run: cd ${{github.action_path}} && python3 codecov_status.py
