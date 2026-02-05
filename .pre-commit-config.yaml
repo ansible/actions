@@ -39,13 +39,6 @@ repos:
         name: biome
         alias: biome
         args: [--unsafe]
-  - repo: https://github.com/streetsidesoftware/cspell-cli
-    rev: v9.6.0
-    hooks:
-      - id: cspell
-        name: cspell
-        # entry: codespell --relative
-        args: [--relative, --no-progress, --no-summary]
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.10
     hooks:

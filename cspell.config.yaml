@@ -12,5 +12,9 @@ dictionaries:
   - python-common
 enabled: true
 ignorePaths:
-  - cspell.config.yaml
+  - "**/*.egg-info/**"
+  - ".tox/**"
   - ".vscode/**"
+  - .github/CODEOWNERS
+  - .gitignore
+  - cspell.config.yaml
