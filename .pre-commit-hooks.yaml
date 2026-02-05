@@ -1,5 +1,5 @@
 ---
-# cspell: ignore ansiblelint
+# cspell: ignore ansiblelint tombi
 # hooks that rely on uv to track dependencies instead of pre-commit hooks
 # Order matters: faster hooks first, also auto-formatters being prioritized
 - id: toml
@@ -74,3 +74,18 @@
   files: \.(yaml|yml)$
   types: [file, yaml]
   entry: uv run -q --group lint yamllint --strict
+- id: cspell
+  name: cspell + remove unused and sort dictionary
+  # see https://github.com/streetsidesoftware/cspell-cli/issues/686
+  # requires cspell-cli npm dependency
+  entry: bash
+  language: system
+  pass_filenames: false
+  always_run: true
+  args:
+    - "-euo"
+    - "pipefail"
+    - "-c"
+    - "npm exec cspell-cli -- . --relative --no-progress --no-summary && { NEW_DICT=$(npm exec cspell-cli -- . --disable-dictionary=words --no-exit-code --words-only
+      --quiet --unique | LC_ALL=C sort); if [ \"$NEW_DICT\" != \"$(cat .config/dictionary.txt 2>/dev/null || true)\" ]; then echo \"$NEW_DICT\" > .config/dictionary.txt;
+      fi; }"
