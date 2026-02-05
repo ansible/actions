@@ -1,0 +1,90 @@
+# cspell: ignore biomejs prek tombi
+[[repos]]
+repo = "https://github.com/astral-sh/uv-pre-commit"
+rev = "0.10.0"
+hooks = [
+  { id = "uv-sync", priority = 0 },
+  { id = "uv-lock", alias = "lock", priority = 1 },
+  { id = "uv-lock", name = "deps: upgrade via uv sync --upgrade", alias = "deps", args = [
+    "--upgrade"
+  ], stages = ["manual"], priority = 2 }
+]
+
+[[repos]]
+repo = "https://github.com/rhysd/actionlint"
+rev = "v1.7.10"
+hooks = [{ id = "actionlint", priority = 0 }]
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "end-of-file-fixer", priority = 0 },
+  { id = "trailing-whitespace", priority = 0 },
+  { id = "mixed-line-ending", priority = 0 },
+  { id = "fix-byte-order-marker", priority = 0 },
+  { id = "check-executables-have-shebangs", priority = 0 },
+  { id = "check-merge-conflict", priority = 0 },
+]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "biome"
+name = "biome"
+language = "system"
+pass_filenames = false
+files = { glob = [
+  "*.js",
+  "*.jsx",
+  "*.ts",
+  "*.tsx",
+  "*.json",
+  "*.css",
+  "*.scss",
+  "*.html",
+  "*.md",
+  "*.yml",
+  "*.yaml",
+  "*.toml",
+  "*.toml.in"
+] }
+entry = "npx @biomejs/biome lint --write --unsafe"
+priority = 1
+
+[[repos.hooks]]
+id = "renovate"
+name = "renovate config validator"
+language = "system"
+pass_filenames = false
+files = { glob = ["renovate.json"] }
+entry = "npx --yes --package renovate -- renovate-config-validator --strict"
+priority = 0
+
+[[repos.hooks]]
+id = "toml"
+name = "toml (format and lint)"
+language = "system"
+pass_filenames = false
+files = { glob = ["*.toml", "*.toml.in"] }
+entry = "bash -c 'uv run -q --group=lint tombi format . && uv run -q --group=lint tombi lint .'"
+priority = 1
+
+[[repos.hooks]]
+id = "ruff"
+name = "ruff"
+language = "system"
+pass_filenames = false
+files = { glob = ["*.py", "*.pyi", "pyproject.toml", "uv.lock"] }
+entry = "uv run -q --group=lint ruff format --check ."
+priority = 2
+
+[[repos.hooks]]
+id = "mypy"
+name = "mypy"
+args = ["--strict"]
+language = "system"
+pass_filenames = false
+files = { glob = ["*.py", "*.pyi", "pyproject.toml", "uv.lock"] }
+entry = "uv run -q --group=lint mypy --strict ."
+priority = 3

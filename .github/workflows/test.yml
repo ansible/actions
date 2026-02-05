@@ -120,13 +120,15 @@ jobs:
       - uses: actions/cache@v5
         if: ${{ runner.os != 'Windows' }}
         with:
-          path: ~/.cache/pre-commit/
-          key: pre-commit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
+          path: ~/.cache/prek/
+          key: prek-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/.pre-commit-config.yaml', '**/prek.toml') }}
 
       - name: Lint
         if: ${{ runner.os != 'Windows' }}
         # See https://github.com/rhysd/actionlint/issues/555
-        run: ${{ runner.os == 'Linux' && runner.arch == 'ARM64' && 'SKIP=actionlint ' || '' }}uvx --with pre-commit-uv pre-commit run --all-files
+        run: >
+          ${{ runner.os == 'Linux' && runner.arch == 'ARM64' && 'SKIP=actionlint ' || '' }}
+          uv tool run prek run --all-files --show-diff-on-failure
 
       # Test end-to-end by uploading a few artifacts and then downloading them
       - name: Create artifact files
