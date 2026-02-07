@@ -10,6 +10,9 @@
     "npm-check-updates": "^19.3.2",
     "renovate": "^43.4.2"
   },
+  "engines": {
+    "node": ">=24"
+  },
   "name": "ansible-actions",
   "version": "0.0.1"
 }
