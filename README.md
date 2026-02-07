@@ -8,3 +8,5 @@ so if you want to be an early adopter or have an active involvement with its
 development, contact Ansible DevTools team.
 
 ## Components
+
+FOO!
