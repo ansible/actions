@@ -1,4 +1,7 @@
+#:schema https://raw.githubusercontent.com/j178/prek/refs/heads/master/prek.schema.json
+#:tombi schema.strict = false
 # cspell: ignore biomejs prek tombi
+
 [[repos]]
 repo = "https://github.com/astral-sh/uv-pre-commit"
 rev = "0.10.0"

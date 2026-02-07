@@ -5,7 +5,7 @@ name: post
 on:
   workflow_run:
     workflows:
-      - ci
+      - test
     types:
       - completed
 permissions:

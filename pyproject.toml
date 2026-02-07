@@ -210,6 +210,7 @@ commands = [
     "deps",
   ],
   ["prek", "autoupdate"],
+  ["npx", "ncu", "-u"],
   ["tox", "-e", "lint"],
 ]
 commands_pre = []
