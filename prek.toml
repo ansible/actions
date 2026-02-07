@@ -91,3 +91,18 @@ pass_filenames = false
 files = { glob = ["*.py", "*.pyi", "pyproject.toml", "uv.lock"] }
 entry = "uv run -q --group=lint mypy --strict ."
 priority = 3
+
+[[repos.hooks]]
+id = "node"
+name = "node deps"
+language = "node"
+language_version = "24"
+pass_filenames = false
+files = { glob = [
+  "package.json",
+  "package-lock.json",
+  "yarn.lock",
+  "pnpm-lock.yaml"
+] }
+entry = "bash -c 'npx ncu -u && npm install'"
+priority = 4
