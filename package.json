@@ -5,7 +5,9 @@
     "markdownlint-cli2-formatter-summarize": "^0.0.8"
   },
   "devDependencies": {
-    "cspell-cli": "^9.6.0"
+    "@biomejs/biome": "^2.3.14",
+    "cspell-cli": "^9.6.0",
+    "renovate": "^37.440.7"
   },
   "name": "ansible-actions",
   "version": "0.0.1"

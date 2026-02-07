@@ -1,4 +1,4 @@
-# cspell: ignore addopts conftest minversion pyargs posargs PYTHONPYCACHEPREFIX PYTHONIOENCODING PYTHONBREAKPOINT tombi
+# cspell: ignore addopts conftest minversion pyargs posargs PYTHONPYCACHEPREFIX PYTHONIOENCODING PYTHONBREAKPOINT tombi prek
 #:tombi schema.strict = false
 
 [project]
@@ -28,8 +28,7 @@ lint = [
   "ansible-lint>=25.9.2",
   "codespell[toml]>=2.4.1",
   "mypy>=1.18.2",
-  "pre-commit>=3.5.0",
-  "pre-commit-uv>=4.1.4",
+  "prek>=0.3.1",
   "pylint>=4.0.2",
   "ruff>=0.14.0",
   "shellcheck-py>=0.11.0.1",
@@ -202,7 +201,7 @@ requires = [
 [tool.tox.env.deps]
 commands = [
   [
-    "pre-commit",
+    "prek",
     "run",
     "--all-files",
     "--show-diff-on-failure",
@@ -210,16 +209,17 @@ commands = [
     "manual",
     "deps",
   ],
-  ["pre-commit", "autoupdate"],
+  ["prek", "autoupdate"],
   ["tox", "-e", "lint"],
 ]
 commands_pre = []
 description = "Bump all test dependencies"
+dependency_groups = ["lint"]
 
 [tool.tox.env.hooks]
 commands = [["{tox_root}/tools/test-hooks.sh"]]
 dependency_groups = ["lint"]
-description = "Validate pre-commit hooks definitions"
+description = "Validate prek hooks definitions"
 
 [tool.tox.env.image]
 dependency_groups = []
@@ -235,7 +235,7 @@ allowlist_externals = ["docker", "sh"]
 description = "Run all linters"
 dependency_groups = ["lint"]
 commands_pre = []
-commands = [["pre-commit", "run", "--all-files", "--show-diff-on-failure"]]
+commands = [["prek", "run", "--all-files", "--show-diff-on-failure"]]
 
 [tool.tox.env_run_base]
 description = """Run the tests: py{py_dot_ver}"""
