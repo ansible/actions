@@ -120,8 +120,22 @@ jobs:
       - uses: actions/cache@v5
         if: ${{ runner.os != 'Windows' }}
         with:
-          path: ~/.cache/prek/
-          key: prek-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/.pre-commit-config.yaml', '**/prek.toml') }}
+          path: |
+            ~/.cache/prek/
+            ~/.cache/uv/
+            ~/.npm/
+          key: >-
+            cache-${{ runner.os }}-${{ runner.arch }}-
+            ${{ hashFiles(
+            '**/.pre-commit-config.yaml',
+            '**/package-lock.json',
+            '**/package.json',
+            '**/pnpm-lock.yaml',
+            '**/prek.toml',
+            '**/pyproject.toml',
+            '**/uv.lock',
+            '**/yarn.lock'
+            ) }}
 
       - name: Lint
         if: ${{ runner.os != 'Windows' }}
@@ -331,5 +345,11 @@ jobs:
       - upload-artifact
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Remove test artifacts
+        if: always()
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            Artifact-*
+            Symlinked-Artifact-*
+            Multi-Path-Artifact-*
