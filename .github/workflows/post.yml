@@ -20,10 +20,14 @@ jobs:
       sonar for ${{ github.event.workflow_run.event }} on
       ${{ github.event.workflow_run.head_branch }}
     runs-on: ubuntu-latest
-    if: >
-      github.repository == github.event.workflow_run.head_repository.full_name &&
-      github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.conclusion == 'success'
     steps:
+      - name: Debug
+        run: |
+          cat <<EOF
+          ${{ github.event.workflow_run }}
+          EOF
+
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
@@ -60,9 +64,6 @@ jobs:
           gh pr view --repo "${PR_TARGET_REPO}" "${PR_BRANCH}" \
               --json 'number,baseRefName' --jq '"number=\(.number)\nbase_ref=\(.baseRefName)"' \
               >> "${GITHUB_OUTPUT}"
-          cat <<EOF
-          ${{ github.event.workflow_run }}
-          EOF
 
       - name: SonarCloud scan
         # Coverage processing if js map files are not present so we cannot do
