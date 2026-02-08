@@ -8,3 +8,7 @@ so if you want to be an early adopter or have an active involvement with its
 development, contact Ansible DevTools team.
 
 ## Components
+
+- [upload-artifact](/upload-artifact/) action (gitleaks secured)
+- [matrix](/matrix/) action for testing python projects
+- [pre-commit-hooks](/.pre-commit-hooks.yaml)
