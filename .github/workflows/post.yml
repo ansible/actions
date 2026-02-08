@@ -36,12 +36,20 @@ jobs:
           repository: ${{ github.event.workflow_run.head_repository.full_name }}
 
       - name: Download artifacts (coverage reports)
+        id: download-coverage
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          pattern: logs-*.zip
-          path: .
+          name: logs.zip
+          path: .git/coverage
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fail if no coverage reports are found
+        run: |
+          if ! find . -name 'coverage.xml' -print -quit | grep -q .; then
+            echo "::error::No coverage.xml found. Sonar expects coverage (sonar.python.coverage.reportPaths=**/coverage.xml)."
+            exit 1
+          fi
 
       - name: Get PR context
         # Source: https://github.com/orgs/community/discussions/25220#discussioncomment-11316244
