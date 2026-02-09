@@ -104,5 +104,5 @@ files = { glob = [
   "yarn.lock",
   "pnpm-lock.yaml"
 ] }
-entry = "bash -c 'npx ncu -u && npm install'"
+entry = "bash -c 'npx ncu && npm install'"
 priority = 4
