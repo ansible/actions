@@ -67,23 +67,21 @@ jobs:
               git config --global user.name "Ansible DevTools"
               git add -A
               git commit -m 'Prek auto-fixes'
+              git format-patch -1 HEAD --stdout | tee .git/autofix.patch
               echo "Rerunning prek after auto-fixes to verify their effectiveness"
               EXIT_CODE=0
               prek run --all-files --color=always || EXIT_CODE=$?
               EXIT_CODE=$?
-              if  [ $EXIT_CODE -eq 0 ]; then
-                git format-patch -1 HEAD --stdout > autofix.patch
-              fi
           fi
           exit $EXIT_CODE
 
       - name: Upload artifact autofix-patch if present
-        if: always() && steps.prek.outputs.has_changes == 'true'
+        if: hashFiles('.git/autofix.patch') != ''
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: autofix-patch
-          path: autofix.patch
-          if-no-files-found: ignore
+          path: .git/autofix.patch
+          if-no-files-found: error
           retention-days: "1"
   tox:
     uses: ansible/team-devtools/.github/workflows/tox.yml@main
