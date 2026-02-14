@@ -15,6 +15,44 @@ permissions:
   pull-requests: read
   statuses: write
 jobs:
+  autofix:
+    name: autofix
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code from triggering run
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_branch }}
+          repository: ${{ github.event.workflow_run.head_repository.full_name }}
+
+      - name: Download artifact autofix-patch
+        uses: actions/download-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: autofix-patch
+          path: autofix.patch
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply patch and push if present
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          PATCH_FILE=$(find autofix.patch -type f -name '*.patch' 2>/dev/null | head -1)
+          if [ -z "$PATCH_FILE" ]; then
+            echo "No autofix patch found, skipping."
+            exit 0
+          fi
+          git config user.email ansible-devtools@redhat.com
+          git config user.name "Ansible DevTools"
+          git am --no-gpg-sign < "$PATCH_FILE" || exit 1
+          git push origin HEAD:"${HEAD_BRANCH}" || {
+            echo "::error::Push failed. Please either allow maintainers to push to your branch (e.g. enable \"Allow edits from maintainers\" on the PR), or run \`prek run -a\` locally and ensure it passes, then push yourself."
+            exit 1
+          }
   sonar:
     name: >
       sonar for ${{ github.event.workflow_run.event }} on

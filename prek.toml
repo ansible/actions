@@ -8,9 +8,14 @@ rev = "0.10.0"
 hooks = [
   { id = "uv-sync", priority = 0 },
   { id = "uv-lock", alias = "lock", priority = 1 },
-  { id = "uv-lock", name = "deps: upgrade via uv sync --upgrade", alias = "deps", args = [
-    "--upgrade"
-  ], stages = ["manual"], priority = 2 }
+  {
+    id = "uv-lock",
+    name = "deps: upgrade via uv sync --upgrade",
+    alias = "deps",
+    args = ["--upgrade"],
+    stages = ["manual"],
+    priority = 2
+  }
 ]
 
 [[repos]]
@@ -37,21 +42,23 @@ id = "biome"
 name = "biome"
 language = "system"
 pass_filenames = false
-files = { glob = [
-  "*.js",
-  "*.jsx",
-  "*.ts",
-  "*.tsx",
-  "*.json",
-  "*.css",
-  "*.scss",
-  "*.html",
-  "*.md",
-  "*.yml",
-  "*.yaml",
-  "*.toml",
-  "*.toml.in"
-] }
+files = {
+  glob = [
+    "*.js",
+    "*.jsx",
+    "*.ts",
+    "*.tsx",
+    "*.json",
+    "*.css",
+    "*.scss",
+    "*.html",
+    "*.md",
+    "*.yml",
+    "*.yaml",
+    "*.toml",
+    "*.toml.in"
+  ]
+}
 entry = "npx @biomejs/biome lint --write --unsafe"
 priority = 1
 
@@ -98,11 +105,9 @@ name = "node deps"
 language = "node"
 language_version = "24"
 pass_filenames = false
-files = { glob = [
-  "package.json",
-  "package-lock.json",
-  "yarn.lock",
-  "pnpm-lock.yaml"
-] }
-entry = "bash -c 'npx ncu -u && npm install'"
+files = {
+  glob = ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"]
+}
+stages = ["manual"]
+entry = "bash -c 'npx ncu && npm install'"
 priority = 4
