@@ -43,6 +43,8 @@ jobs:
       # needed by our prek systems hooks like biome
       - name: Set up Node.js
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+        with:
+          node-version: "24"
 
       - name: node install (npm/yarn)
         run: |
@@ -83,6 +85,13 @@ jobs:
           path: .git/autofix.patch
           if-no-files-found: error
           retention-days: "1"
+
+      - name: Fail fast to allow autofix to be applied
+        if: hashFiles('.git/autofix.patch') != ''
+        run: |
+          echo "::error::An auto-fix should be pushed in few seconds."
+          exit 1
+
   tox:
     uses: ansible/team-devtools/.github/workflows/tox.yml@main
     needs: prek
@@ -107,13 +116,13 @@ jobs:
 
   upload-artifact:
     name: upload-artifact-${{ matrix.name || matrix.runs-on }}
+    needs: prek
     env:
       # ACTIONS_RUNNER_DEBUG: "true"
       # ACTIONS_STEP_DEBUG: "true"
       # https://docs.github.com/en/actions/learn-github-actions/environment-variables
       # https://devblogs.microsoft.com/commandline/share-environment-vars-between-wsl-and-windows/
-      WSLENV:
-        HOSTNAME:CI:FORCE_COLOR:GITHUB_ACTION:GITHUB_ACTION_PATH/p:GITHUB_ACTION_REPOSITORY:GITHUB_WORKFLOW:GITHUB_WORKSPACE/p:GITHUB_PATH/p:GITHUB_ENV/p:VIRTUAL_ENV/p:SKIP_PODMAN:SKIP_DOCKER:NODE_OPTIONS
+      WSLENV: "HOSTNAME:CI:FORCE_COLOR:GITHUB_ACTION:GITHUB_ACTION_PATH/p: GITHUB_ACTION_REPOSITORY:GITHUB_WORKFLOW:GITHUB_WORKSPACE/p: GITHUB_PATH/p:GITHUB_ENV/p:VIRTUAL_ENV/p:SKIP_PODMAN:SKIP_DOCKER:NODE_OPTIONS"
       # We define a hostname because otherwise the variable might not always be accessible on runners.
       HOSTNAME: gha
     defaults:
