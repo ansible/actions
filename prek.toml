@@ -1,6 +1,6 @@
 #:schema https://raw.githubusercontent.com/j178/prek/refs/heads/master/prek.schema.json
 #:tombi schema.strict = false
-# cspell: ignore biomejs prek tombi
+# cspell: ignore biomejs prek tombi renovaterc
 
 [[repos]]
 repo = "https://github.com/astral-sh/uv-pre-commit"
@@ -65,10 +65,12 @@ priority = 1
 [[repos.hooks]]
 id = "renovate"
 name = "renovate config validator"
-language = "system"
+language = "node"
+language_version = "24"
 pass_filenames = false
-files = { glob = ["renovate.json"] }
-entry = "npx --yes --package renovate -- renovate-config-validator --strict"
+additional_dependencies = ["renovate@latest"]
+files = "(renovate.json|renovate.json5|.renovaterc|.renovaterc.json5|.renovaterc.json)$"
+entry = "env NODE_OPTIONS='--no-warnings --no-deprecation' npx --yes --package renovate@latest -- renovate-config-validator --strict"
 priority = 0
 
 [[repos.hooks]]
