@@ -100,3 +100,15 @@
   language: system
   files: "codecov.yml"
   pass_filenames: false
+- id: renovate-config-validator
+  name: renovate config validator
+  alias: renovate
+  entry: "env NODE_OPTIONS='--no-warnings --no-deprecation' npx --yes --package renovate@latest -- renovate-config-validator --strict"
+  language: node
+  language_version: "24"
+  additional_dependencies: ["renovate@latest"]
+  pass_filenames: false
+  files: "(renovate.json|renovate.json5|.renovaterc|.renovaterc.json5|.renovaterc.json)$"
+  args: []
+  # Do not add `renovate` a dependency because it does change too often and
+  # causing warnings about dependencies that we cannot fix. Keep it out.
