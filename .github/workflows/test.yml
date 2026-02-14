@@ -29,8 +29,65 @@ permissions:
   pull-requests: write
 
 jobs:
+  prek:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # we need tags for dynamic versioning
+          show-progress: false
+
+      # needed by our prek system hooks like toml
+      - uses: astral-sh/setup-uv@v7
+
+      # needed by our prek systems hooks like biome
+      - name: Set up Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+
+      - name: node install (npm/yarn)
+        run: |
+          test -f yarn.lock  && npx yarn install --immutable
+          test -f package-lock.json && npm install
+
+      - uses: j178/prek-action@v1
+        with:
+          install-only: true
+
+      - name: Run prek and produce patch if needed
+        id: prek
+        env:
+          # For pull_request: PR branch; for push/merge_group: current branch ref name
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -x
+          EXIT_CODE=0
+          prek run --all-files --color=always || EXIT_CODE=$?
+          if [ -n "$(git status --porcelain)" ]; then
+              git config --global user.email ansible-devtools@redhat.com
+              git config --global user.name "Ansible DevTools"
+              git add -A
+              git commit -m 'Prek auto-fixes'
+              echo "Rerunning prek after auto-fixes to verify their effectiveness"
+              EXIT_CODE=0
+              prek run --all-files --color=always || EXIT_CODE=$?
+              EXIT_CODE=$?
+              if  [ $EXIT_CODE -eq 0 ]; then
+                git format-patch -1 HEAD --stdout > autofix.patch
+              fi
+          fi
+          exit $EXIT_CODE
+
+      - name: Upload artifact autofix-patch if present
+        if: always() && steps.prek.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: autofix-patch
+          path: autofix.patch
+          if-no-files-found: ignore
+          retention-days: "1"
   tox:
     uses: ansible/team-devtools/.github/workflows/tox.yml@main
+    needs: prek
     secrets: inherit
     with:
       min_python: "3.12"
@@ -43,6 +100,7 @@ jobs:
       platforms: linux,macos
 
   matrix:
+    needs: prek
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -353,3 +411,4 @@ jobs:
             Artifact-*
             Symlinked-Artifact-*
             Multi-Path-Artifact-*
+          failOnError: false
