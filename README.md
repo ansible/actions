@@ -1,4 +1,4 @@
-# Reusable Github Actions and settings
+# Reusable Github Actions and settings   
 
 This repository aims to host Github Actions and settings that can easily
 be reused by other repositories.
