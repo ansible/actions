@@ -79,7 +79,7 @@ jobs:
 
       - name: Upload artifact autofix-patch if present
         if: hashFiles('.git/autofix.patch') != ''
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@47309c993abb98030a35d55ef7ff34b7fa1074b5
         with:
           name: autofix-patch
           path: .git/autofix.patch
