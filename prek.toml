@@ -2,6 +2,8 @@
 #:tombi schema.strict = false
 # cspell: ignore biomejs prek tombi renovaterc
 
+# WARNING: all system hooks mush use entry: sh -c '...' to avoid unexpected failures
+# See: https://github.com/j178/prek/issues/1690
 [[repos]]
 repo = "https://github.com/astral-sh/uv-pre-commit"
 rev = "0.10.0"
@@ -79,7 +81,7 @@ name = "toml (format and lint)"
 language = "system"
 pass_filenames = false
 files = { glob = ["*.toml", "*.toml.in"] }
-entry = "bash -c 'uv run -q --group=lint tombi format . && uv run -q --group=lint tombi lint .'"
+entry = "sh -c 'uv run -q --group=lint tombi format . && uv run -q --group=lint tombi lint .'"
 priority = 1
 
 [[repos.hooks]]
@@ -88,7 +90,7 @@ name = "ruff"
 language = "system"
 pass_filenames = false
 files = { glob = ["*.py", "*.pyi", "pyproject.toml", "uv.lock"] }
-entry = "uv run -q --group=lint ruff format --check ."
+entry = "sh -c 'printenv PATH; uv run -q --group=lint ruff format --check .'"
 priority = 2
 
 [[repos.hooks]]
@@ -98,7 +100,7 @@ args = ["--strict"]
 language = "system"
 pass_filenames = false
 files = { glob = ["*.py", "*.pyi", "pyproject.toml", "uv.lock"] }
-entry = "uv run -q --group=lint mypy --strict ."
+entry = "sh -c 'uv run -q --group=lint mypy --strict .'"
 priority = 3
 
 [[repos.hooks]]
@@ -111,5 +113,14 @@ files = {
   glob = ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"]
 }
 stages = ["manual"]
-entry = "bash -c 'npx ncu && npm ci'"
+entry = "sh -c 'npx ncu && npm ci'"
 priority = 4
+
+[[repos.hooks]]
+id = "shellcheck"
+name = "shellcheck"
+language = "system"
+pass_filenames = true
+types = ["shell"]
+entry = 'sh -c "uv run -q --group lint shellcheck $@"'
+priority = 5

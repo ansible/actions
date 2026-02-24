@@ -6,7 +6,7 @@
   # keep name lowercase for consistency with other hook names
   name: toml
   description: Reformat toml files
-  entry: uv run -q --group=lint tombi format
+  entry: sh -c 'uv run -q --group=lint tombi format'
   language: system
   pass_filenames: false
   types_or: [toml]
@@ -31,14 +31,14 @@
 - id: mypy
   name: mypy
   description: This hook runs mypy
-  entry: uv run -q --all-extras --group=lint -m mypy .
+  entry: sh -c 'uv run -q --all-extras --group=lint -m mypy .'
   language: system
   types_or: [python, pyi]
   pass_filenames: false
 - id: pylint
   name: pylint
   description: This hook runs pylint
-  entry: uv run -q --all-extras --group=lint -m pylint --score=n .
+  entry: sh -c 'uv run -q --all-extras --group=lint -m pylint --score=n .'
   language: system
   types_or: [python, pyi]
   require_serial: true
@@ -50,21 +50,23 @@
   # for ansible-lint in particular we want to for use of python>=3.13 to ensure
   # that latest ansible-core will be installed. Always use --isolated when
   # you mention custom python version to avoid accidentally recreating current venv
-  entry: uv run -q --isolated --python='>=3.13,<3.14' --group=lint -m ansiblelint --fix -v --force-color
+  entry: sh -c 'uv run -q --isolated --python=">=3.13,<3.14" --group=lint -m ansiblelint --fix -v --force-color'
   language: system
   pass_filenames: false
 - id: shellcheck
   name: shellcheck
   language: system
   description: Test shell scripts with shellcheck
-  entry: uv run -q --group lint shellcheck
+  # https://github.com/koalaman/shellcheck/issues/143
+  entry: 'sh -c "uv run -q --group lint shellcheck $@"'
   types: [shell]
+  pass_filenames: true
   require_serial: true # shellcheck can detect sourcing this way
 - id: codespell
   name: codespell
   language: system
   description: Test shell scripts with shellcheck
-  entry: uv run -q --group lint codespell
+  entry: sh -c 'uv run -q --group lint codespell'
   types: [text]
   require_serial: true # shellcheck can detect sourcing this way
   pass_filenames: false # otherwise ignore option will not be used
@@ -73,7 +75,8 @@
   language: system
   files: \.(yaml|yml)$
   types: [file, yaml]
-  entry: uv run -q --group lint yamllint --strict
+  pass_filenames: false
+  entry: sh -c 'uv run -q --group lint yamllint --strict .'
 - id: cspell
   name: cspell + remove unused and sort dictionary
   # see https://github.com/streetsidesoftware/cspell-cli/issues/686
