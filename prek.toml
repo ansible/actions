@@ -6,7 +6,7 @@
 # See: https://github.com/j178/prek/issues/1690
 [[repos]]
 repo = "https://github.com/astral-sh/uv-pre-commit"
-rev = "0.10.0"
+rev = "0.10.5"
 hooks = [
   { id = "uv-sync", priority = 0 },
   { id = "uv-lock", alias = "lock", priority = 1 },
@@ -22,7 +22,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/rhysd/actionlint"
-rev = "v1.7.10"
+rev = "v1.7.11"
 hooks = [{ id = "actionlint", priority = 0 }]
 
 [[repos]]
@@ -121,6 +121,7 @@ id = "shellcheck"
 name = "shellcheck"
 language = "system"
 pass_filenames = true
+require_serial = true
 types = ["shell"]
 entry = 'sh -c "uv run -q --group lint shellcheck $@"'
 priority = 5
