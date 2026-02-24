@@ -49,7 +49,7 @@ jobs:
       - name: node install (npm/yarn)
         run: |
           test -f yarn.lock  && npx yarn install --immutable
-          test -f package-lock.json && npm install
+          test -f package-lock.json && npm ci
 
       - uses: j178/prek-action@v1
         with:
