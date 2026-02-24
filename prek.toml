@@ -111,5 +111,5 @@ files = {
   glob = ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"]
 }
 stages = ["manual"]
-entry = "bash -c 'npx ncu && npm install'"
+entry = "bash -c 'npx ncu && npm ci'"
 priority = 4
