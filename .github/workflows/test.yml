@@ -22,6 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  actions: write # needed to cancel current workflow run if needed
   checks: read
   contents: write
   id-token: write
@@ -38,20 +39,23 @@ jobs:
           show-progress: false
 
       # needed by our prek system hooks like toml
-      - uses: astral-sh/setup-uv@v7
+      - name: Install uv (cache)
+        uses: astral-sh/setup-uv@v7
 
       # needed by our prek systems hooks like biome
-      - name: Set up Node.js
+      - name: Install node (cache)
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
         with:
           node-version: "24"
 
-      - name: node install (npm/yarn)
+      - name: Run `yarn install` or `npm ci`
+        if: hashFiles('yarn.lock') != '' || hashFiles('package-lock.json') != ''
         run: |
           test -f yarn.lock  && npx yarn install --immutable
           test -f package-lock.json && npm ci
 
-      - uses: j178/prek-action@v1
+      - name: Install prek (cache)
+        uses: j178/prek-action@v1
         with:
           install-only: true
 
@@ -86,11 +90,16 @@ jobs:
           if-no-files-found: error
           retention-days: "1"
 
-      - name: Fail fast to allow autofix to be applied
+      - name: Cancel current workflow if autofix was created
         if: hashFiles('.git/autofix.patch') != ''
-        run: |
-          echo "::error::An auto-fix should be pushed in few seconds."
-          exit 1
+        uses: actions/github-script@v8
+        with:
+          script: |
+            github.rest.actions.cancelWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            });
 
   tox:
     uses: ansible/team-devtools/.github/workflows/tox.yml@main
