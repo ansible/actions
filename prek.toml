@@ -125,3 +125,11 @@ require_serial = true
 types = ["shell"]
 entry = 'sh -c "uv run -q --group lint shellcheck $@"'
 priority = 5
+
+[[repos.hooks]]
+id = "pydoclint"
+name = "pydoclint"
+language = "system"
+pass_filenames = false
+entry = "sh -ec 'uv run -q --group lint pydoclint -q . && uv run -q --group lint pydoclint --generate-baseline=1 .'"
+priority = 6

@@ -29,6 +29,7 @@ lint = [
   "codespell[toml]>=2.4.1",
   "mypy>=1.18.2",
   "prek>=0.3.1",
+  "pydoclint>=0.8.3",
   "pylint>=4.0.2",
   "ruff>=0.14.0",
   "shellcheck-py>=0.11.0.1",
@@ -88,12 +89,31 @@ strict = true
 warn_redundant_casts = true
 warn_return_any = true
 warn_unused_configs = true
+exclude = [
+  ".tox",
+  ".venv",
+  "node_modules",
+  "build",
+  "dist",
+  "venv",
+]
 
 [[tool.mypy.overrides]]
 module = ["actions_toolkit"]
 ignore_missing_imports = true
 implicit_reexport = true
 ignore_errors = true
+
+[tool.pydoclint]
+allow-init-docstring = true
+arg-type-hints-in-docstring = false
+baseline = ".config/pydoclint-baseline.txt"
+check-return-types = false
+exclude = '\.git|\.tox|build|collections|out|venv|node_modules'
+should-document-private-class-attributes = true
+show-filenames-in-every-violation-message = true
+skip-checking-short-docstrings = false
+style = "google"
 
 [tool.pylint.main]
 ignore-paths = ".tox|.venv|node_modules"

@@ -115,3 +115,9 @@
   args: []
   # Do not add `renovate` a dependency because it does change too often and
   # causing warnings about dependencies that we cannot fix. Keep it out.
+- id: pydoclint
+  name: pydoclint
+  language: system
+  # This allows automatic reduction of the baseline file when needed.
+  entry: sh -ec "uv run -q --group lint pydoclint -q . && uv run -q --group lint pydoclint --generate-baseline=1 ."
+  pass_filenames: false

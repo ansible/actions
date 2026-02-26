@@ -26,7 +26,14 @@ IMPLICIT_SKIP_EXPLODE = "0"
 
 
 def sort_human(data: list[str]) -> list[str]:
-    """Sort a list using human logic, so 'py39' comes before 'py311'."""
+    """Sort a list using human logic, so 'py39' comes before 'py311'.
+
+    Args:
+        data: The list to sort.
+
+    Returns:
+        The sorted list.
+    """
 
     def convert(text: str) -> str | float:
         return float(text) if text.isdigit() else text
@@ -39,7 +46,13 @@ def sort_human(data: list[str]) -> list[str]:
 
 
 def add_job(result: dict[str, dict[str, str]], name: str, data: dict[str, str]) -> None:
-    """Add a new job to the list of generated jobs."""
+    """Add a new job to the list of generated jobs.
+
+    Args:
+        result: The dictionary of generated jobs.
+        name: The name of the job.
+        data: The data of the job.
+    """
     if name in result:
         core.set_failed(
             f"Action failed as it tried add an already a job with duplicate name {name}: {result[name]} already present while trying to add {data}",
@@ -48,7 +61,11 @@ def add_job(result: dict[str, dict[str, str]], name: str, data: dict[str, str]) 
 
 
 def get_platforms() -> list[str]:
-    """Retrieve effective list of platforms."""
+    """Retrieve effective list of platforms.
+
+    Returns:
+        The list of platforms.
+    """
     platforms = []
     for v in core.get_input("platforms", required=False).split(","):
         platform, run_on = v.split(":") if ":" in v else (v, None)
@@ -64,7 +81,11 @@ def get_platforms() -> list[str]:
 
 
 def produce_output(output: dict[str, Any]) -> None:
-    """Produce the output."""
+    """Produce the output.
+
+    Args:
+        output: The output to produce.
+    """
     if "TEST_GITHUB_OUTPUT_JSON" in os.environ:
         with Path(os.environ["TEST_GITHUB_OUTPUT_JSON"]).open(
             "w",
@@ -113,7 +134,14 @@ def main() -> None:  # noqa: C901,PLR0912,PLR0915
         python_flavours = len(python_names)
 
         def sort_key(s: str) -> tuple[int, str]:
-            """Sorts longer strings first."""
+            """Sorts longer strings first.
+
+            Args:
+                s: The string to sort.
+
+            Returns:
+                The tuple of the length of the string and the string.
+            """
             return -len(s), s
 
         # we put longer names first in order to pick the most specific platforms
