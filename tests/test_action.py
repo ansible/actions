@@ -61,7 +61,12 @@ import pytest
     ],
 )
 def test_action(passed_env: dict[str, str], expected: dict[str, str]) -> None:
-    """Sample test."""
+    """Sample test.
+
+    Args:
+        passed_env: The environment variables to pass to the action.
+        expected: The expected output of the action.
+    """
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         env = {
             **os.environ.copy(),

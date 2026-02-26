@@ -1,6 +1,8 @@
 Sbarnea
 Sorin
 codespell
+docstrings
 envlist
 minmax
+pydoclint
 showlocals
