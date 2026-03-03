@@ -1,6 +1,6 @@
 #:schema https://raw.githubusercontent.com/j178/prek/refs/heads/master/prek.schema.json
 #:tombi schema.strict = false
-# cspell: ignore biomejs prek tombi renovaterc
+# cspell: ignore biomejs prek tombi renovaterc EDITMSG
 
 # WARNING: all system hooks mush use entry: sh -c '...' to avoid unexpected failures
 # See: https://github.com/j178/prek/issues/1690
@@ -133,3 +133,14 @@ language = "system"
 pass_filenames = false
 entry = "sh -ec 'uv run -q --group lint pydoclint -q . && uv run -q --group lint pydoclint --generate-baseline=1 .'"
 priority = 6
+
+[[repos.hooks]]
+id = "commit"
+name = "conventional-pre-commit"
+alias = "msg"
+language = "python"
+pass_filenames = false
+always_run = true
+entry = "sh -ec 'if [ -f .git/COMMIT_EDITMSG ]; then cat .git/COMMIT_EDITMSG; else git log -1 -q --pretty=format:\"%s\" ${COMMIT_SHA:-}; fi | uv tool run conventional-pre-commit --verbose --strict /dev/stdin'"
+priority = 0
+stages = ["commit-msg", "pre-commit", "pre-push"]
