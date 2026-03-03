@@ -66,7 +66,7 @@
   name: codespell
   language: system
   description: Test shell scripts with shellcheck
-  entry: sh -c 'uv run -q --group lint codespell'
+  entry: sh -c 'uv tool run codespell[toml] --check-hidden --check-filenames'
   types: [text]
   require_serial: true # shellcheck can detect sourcing this way
   pass_filenames: false # otherwise ignore option will not be used

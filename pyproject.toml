@@ -45,7 +45,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.codespell]
-skip = ".tox,.mypy_cache,build,.git,.eggs,pip-wheel-metadata,node_modules,package-lock.json,uv.lock"
+skip = ".tox,.DS_Store,dist,.ruff_cache,.venv,.mypy_cache,build,.git,.eggs,pip-wheel-metadata,node_modules,package-lock.json,uv.lock"
 
 # Keep this default because xml/report do not know to use load it from config file:
 # data_file = ".coverage"
