@@ -97,7 +97,7 @@
   # https://superuser.com/a/1587813/3004
   entry: >
     bash -c '[ $(
-    curl --silent -o /dev/stderr -w "%{http_code}" -X POST
+    curl --silent --retry 5 --retry-delay 30 -o /dev/stderr -w "%{http_code}" -X POST
     --data-binary @codecov.yml https://codecov.io/validate
     ) -eq 200 ]'
   language: system
