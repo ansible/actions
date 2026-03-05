@@ -47,6 +47,7 @@
     "recreateWhen": "always"
   },
   "minimumReleaseAge": "2 days",
+  "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
       "branchTopic": "all",
