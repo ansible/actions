@@ -80,5 +80,12 @@
   "schedule": ["before 4am on monday"],
   "separateMajorMinor": false,
   "separateMinorPatch": false,
-  "timezone": "UTC"
+  "timezone": "UTC",
+  "vulnerabilityAlerts": {
+    "branchTopic": "security",
+    "commitMessagePrefix": "fix(security): ",
+    "labels": ["fix"],
+    "schedule": ["before 4am"],
+    "vulnerabilityFixStrategy": "lowest"
+  }
 }
