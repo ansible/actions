@@ -103,7 +103,7 @@ runs:
       shell: bash
 
     - name: Upload safe artifact using original actions/upload-artifact
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       id: upload-artifact
       with:
         name: ${{ inputs.name || 'artifact' }}
