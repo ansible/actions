@@ -44,7 +44,7 @@ jobs:
 
       # needed by our prek systems hooks like biome
       - name: Install node (cache)
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: "24"
 
@@ -270,7 +270,7 @@ jobs:
 
       # Download Artifact #1 and verify the correctness of the content
       - name: "Download artifact #1"
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: "Artifact-A-${{ matrix.name }}"
           path: some/new/path
@@ -290,7 +290,7 @@ jobs:
 
       # Download Artifact #2 and verify the correctness of the content
       - name: "Download artifact #2"
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: "Artifact-Wildcard-${{ matrix.name }}"
           path: some/other/path
@@ -311,7 +311,7 @@ jobs:
 
       # Download Artifact #3 and verify the correctness of the content
       - name: "Download artifact #3"
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: "Artifact-Wildcard-${{ matrix.name }}"
           path: verify-artifact-3
@@ -332,7 +332,7 @@ jobs:
 
       # Download Artifact #4 and verify the correctness of the content
       - name: "Download artifact #4"
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: "Multi-Path-Artifact-${{ matrix.name }}"
           path: multi/artifact
@@ -353,7 +353,7 @@ jobs:
 
       - name: "Download symlinked artifact"
         if: ${{ !contains(matrix.name, 'wsl') }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: "Symlinked-Artifact-${{ matrix.name }}"
           path: from/symlink
@@ -395,7 +395,7 @@ jobs:
 
       # Download replaced Artifact #1 and verify the correctness of the content
       - name: "Download artifact #1 again"
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: "Artifact-A-${{ matrix.name }}"
           path: overwrite/some/new/path
