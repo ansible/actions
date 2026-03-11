@@ -75,7 +75,7 @@
     "groupName": "all dependencies",
     "groupSlug": "all"
   },
-  "prConcurrentLimit": 1,
+  "prConcurrentLimit": 3,
   "rangeStrategy": "update-lockfile",
   "recreateWhen": "always",
   "schedule": ["before 4am on monday"],
