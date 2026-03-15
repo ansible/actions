@@ -121,3 +121,17 @@
   # This allows automatic reduction of the baseline file when needed.
   entry: sh -ec "uv run -q --group lint pydoclint -q . && uv run -q --group lint pydoclint --generate-baseline=1 ."
   pass_filenames: false
+- id: commit
+  # see https://github.com/compilerla/conventional-pre-commit/issues/41#issuecomment-3989866505
+  name: conventional-pre-commit
+  alias: msg
+  language: python
+  pass_filenames: false
+  always_run: true
+  entry: >
+    sh -ec 'if [ -f .git/COMMIT_EDITMSG ];
+    then cat .git/COMMIT_EDITMSG;
+    else git log -1 -q --pretty=format:"%s" ${COMMIT_SHA:-};
+    fi | uv tool run conventional-pre-commit --verbose --strict /dev/stdin'
+  stages: [commit-msg, pre-commit]
+  args: []

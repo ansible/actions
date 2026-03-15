@@ -66,6 +66,14 @@ jobs:
           BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           set -x
+          printenv | grep 'GITHUB_' | sort
+          export COMMIT_SHA=${{ github.event.pull_request.head.sha }}
+          git log --pretty=oneline --decorate=short -n 1 ${{github.event.pull_request.head.sha }}
+          # echo more
+          # git log --pretty=oneline --decorate=short HEAD...main
+          # git log -1 "${LATEST_BASE_COMMIT:-}"
+          git status
+          ls -la .git
           EXIT_CODE=0
           prek run --all-files --color=always || EXIT_CODE=$?
           if [ -n "$(git status --porcelain)" ]; then
@@ -78,6 +86,10 @@ jobs:
               EXIT_CODE=0
               prek run --all-files --color=always || EXIT_CODE=$?
               EXIT_CODE=$?
+          else
+            echo "Unexpected failure"
+            git status
+            git status --porcelain
           fi
           exit $EXIT_CODE
 
