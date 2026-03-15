@@ -12,6 +12,7 @@ shopt -s nullglob
 IFS=$'\n' read -r -d '' -a INPUT_PATH_ARRAY < <(printf '%s\0' "$INPUT_PATH")
 RESULT=0
 gitleaks=$(command -v gitleaks) || gitleaks=~/.local/bin/gitleaks
+$gitleaks --version
 for path in "${INPUT_PATH_ARRAY[@]}"; do
     for file in $path; do
     if [ -e "$file" ]; then
