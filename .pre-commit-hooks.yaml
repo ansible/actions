@@ -43,6 +43,13 @@
   types_or: [python, pyi]
   require_serial: true
   pass_filenames: false
+- id: pyright
+  name: pyright
+  description: This hook runs pyright
+  entry: sh -c 'uv run -q --group=lint -m pyright .'
+  language: system
+  types_or: [python, pyi]
+  pass_filenames: false
 - id: ansible-lint
   # keep name lowercase for consistency with other hook names
   name: ansible-lint
@@ -89,9 +96,9 @@
     - "-euo"
     - "pipefail"
     - "-c"
-    - "npm exec cspell-cli -- . --relative --no-progress --no-summary && { NEW_DICT=$(npm exec cspell-cli -- . --disable-dictionary=words --no-exit-code --words-only
-      --quiet --unique | LC_ALL=C sort); if [ \"$NEW_DICT\" != \"$(cat .config/dictionary.txt 2>/dev/null || true)\" ]; then echo \"$NEW_DICT\" > .config/dictionary.txt;
-      fi; }"
+    - 'npm exec cspell-cli -- . --relative --no-progress --no-summary && { NEW_DICT=$(npm exec cspell-cli -- . --disable-dictionary=words --no-exit-code --words-only
+      --quiet --unique | LC_ALL=C sort); if [ "$NEW_DICT" != "$(cat .config/dictionary.txt 2>/dev/null || true)" ]; then echo "$NEW_DICT" > .config/dictionary.txt;
+      fi; }'
 - id: codecov
   name: Check codecov.yml
   # https://superuser.com/a/1587813/3004

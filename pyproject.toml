@@ -25,12 +25,14 @@ dev = [
   "pytest >= 7.2.2",
 ]
 lint = [
+  "actions-toolkit>=0.1.15",
   "ansible-lint>=25.9.2",
   "codespell[toml]>=2.4.1",
   "mypy>=1.18.2",
   "prek>=0.3.1",
   "pydoclint>=0.8.3",
   "pylint>=4.0.2",
+  "pyright>=1.1.408",
   "ruff>=0.14.0",
   "shellcheck-py>=0.11.0.1",
   "tombi>=0.6.25",
