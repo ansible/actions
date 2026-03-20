@@ -2,7 +2,8 @@
   "dependencies": {
     "markdownlint-cli2": "^0.21.0",
     "markdownlint-cli2-formatter-pretty": "^0.0.10",
-    "markdownlint-cli2-formatter-summarize": "^0.0.8"
+    "markdownlint-cli2-formatter-summarize": "^0.0.8",
+    "renovate": "^43.84.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",

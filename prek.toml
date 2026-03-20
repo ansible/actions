@@ -70,9 +70,8 @@ name = "renovate config validator"
 language = "node"
 language_version = "24"
 pass_filenames = false
-additional_dependencies = ["renovate@latest"]
 files = "(renovate.json|renovate.json5|.renovaterc|.renovaterc.json5|.renovaterc.json)$"
-entry = "env NODE_OPTIONS='--no-warnings --no-deprecation' npx --yes --package renovate@latest -- renovate-config-validator --strict"
+entry = "npm exec -- renovate-config-validator --strict"
 priority = 0
 
 [[repos.hooks]]

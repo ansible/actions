@@ -14,13 +14,10 @@
   name: markdown (md)
   description: Runs markdownlint-cli2 with fix
   language: node
+  language_version: "24"
   pass_filenames: false
   types: [markdown]
-  additional_dependencies:
-    - markdownlint-cli2
-    - markdownlint-cli2-formatter-pretty
-    - markdownlint-cli2-formatter-summarize
-  entry: markdownlint-cli2 --fix "**/*.md" "#node_modules"
+  entry: npm exec -- markdownlint-cli2 --fix "**/*.md" "#node_modules"
 - id: ruff
   name: ruff
   language: system
@@ -113,10 +110,9 @@
 - id: renovate-config-validator
   name: renovate config validator
   alias: renovate
-  entry: "env NODE_OPTIONS='--no-warnings --no-deprecation' npx --yes --package renovate@latest -- renovate-config-validator --strict"
+  entry: npm exec -- renovate-config-validator --strict
   language: node
   language_version: "24"
-  additional_dependencies: ["renovate@latest"]
   pass_filenames: false
   files: "(renovate.json|renovate.json5|.renovaterc|.renovaterc.json5|.renovaterc.json)$"
   args: []
