@@ -65,7 +65,7 @@
   language: system
   description: Test shell scripts with shellcheck
   # https://github.com/koalaman/shellcheck/issues/143
-  entry: 'sh -c "uv run -q --group lint shellcheck $@"'
+  entry: uv run -q --group lint shellcheck
   types: [shell]
   pass_filenames: true
   require_serial: true # shellcheck can detect sourcing this way
