@@ -14,6 +14,7 @@
   name: markdown (md)
   description: Runs markdownlint-cli2 with fix
   language: node
+  language_version: "24"
   pass_filenames: false
   types: [markdown]
   additional_dependencies:
@@ -89,7 +90,8 @@
   # see https://github.com/streetsidesoftware/cspell-cli/issues/686
   # requires cspell-cli npm dependency
   entry: bash
-  language: system
+  language: node
+  language_version: "24"
   pass_filenames: false
   always_run: true
   args:
