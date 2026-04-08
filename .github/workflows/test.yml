@@ -48,11 +48,12 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Run `yarn install` or `npm ci`
-        if: hashFiles('yarn.lock') != '' || hashFiles('package-lock.json') != ''
+      - name: Run install for node dependencies (yarn/npm/pnpm)
+        if: hashFiles('yarn.lock') != '' || hashFiles('package-lock.json') != '' || hashFiles('pnpm-lock.yaml') != ''
         run: |
-          test -f yarn.lock  && npx yarn install --immutable
-          test -f package-lock.json && npm ci
+          [ ! -f yarn.lock ] || npx yarn install --immutable
+          [ ! -f package-lock.json ] || npm ci
+          [ ! -f pnpm-lock.yaml ] || pnpm install --frozen-lockfile
 
       - name: Install prek (cache)
         uses: j178/prek-action@v2
