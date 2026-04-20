@@ -93,7 +93,7 @@ jobs:
 
       - name: Cancel current workflow if autofix was created
         if: hashFiles('.git/autofix.patch') != ''
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.actions.cancelWorkflowRun({
@@ -160,7 +160,7 @@ jobs:
       # https://github.com/marketplace/actions/setup-wsl
       - name: Activate WSL
         if: contains(matrix.name, 'wsl') && (matrix.runs-on || '') != 'self-hosted'
-        uses: Vampire/setup-wsl@v6.1.0
+        uses: Vampire/setup-wsl@v7.0.0
         with:
           distribution: Ubuntu-24.04
           set-as-default: "true"
