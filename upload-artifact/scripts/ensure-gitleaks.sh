@@ -57,7 +57,7 @@ if [[ -z "$gitleaks_cmd" ]]; then
         brew install gitleaks
         gitleaks_cmd=$(command -v gitleaks)
         version="$($gitleaks_cmd --version || true)"
-    elif [[ "$OSTYPE" == "linux"* || "$OSTYPE" == "msys"* ]]; then
+    elif [[ "$OSTYPE" == "linux"* || "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
         # Function to fetch version using gh CLI
         fetch_version_with_gh() {
             if command -v gh >/dev/null 2>&1; then
@@ -108,13 +108,13 @@ if [[ -z "$gitleaks_cmd" ]]; then
             fi
         done
         mkdir -p ~/.local/bin
-        if [[ "$OSTYPE" == "msys"* ]]; then
+        if [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
             tmp_file=$TEMP/gitleaks.zip
         else
             tmp_file=$(mktemp)
         fi
         curl -Lf -o "$tmp_file" "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_${platform}.${archive}"
-        if [[ "$OSTYPE" == "msys"* ]]; then
+        if [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
             unzip -p "$tmp_file" gitleaks.exe > "$USERPROFILE\AppData\Local\Microsoft\WindowsApps\gitleaks.exe"
             gitleaks_cmd=~/.local/bin/gitleaks
         else
