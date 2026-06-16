@@ -33,14 +33,14 @@ jobs:
   prek:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0 # we need tags for dynamic versioning
           show-progress: false
 
       # needed by our prek system hooks like toml
       - name: Install uv (cache)
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v8.2.0
 
       # needed by our prek systems hooks like biome
       - name: Install node (cache)
@@ -120,7 +120,7 @@ jobs:
     needs: prek
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Self test 'matrix' action
         uses: ./matrix
 
@@ -187,7 +187,7 @@ jobs:
 
       - name: Install the latest version of uv
         if: ${{ runner.os != 'Windows' }}
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v8.2.0
         with:
           version: "latest"
           ignore-nothing-to-cache: true
