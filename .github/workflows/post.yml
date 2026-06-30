@@ -23,7 +23,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code from triggering run
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_branch }}
@@ -65,7 +65,7 @@ jobs:
           EOF
 
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_sha }}
