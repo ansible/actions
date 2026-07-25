@@ -192,6 +192,7 @@ line-length = 88
 select = ["ALL"]
 ignore = [
   "COM812",  # conflict with formatter
+  "CPY001",  # copyright notices not required
   "D203",  # incompatible with D211
   "D213",  # incompatible with D212
   "E501",  # we use black
