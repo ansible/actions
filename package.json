@@ -3,7 +3,7 @@
     "markdownlint-cli2": "^0.23.0",
     "markdownlint-cli2-formatter-pretty": "^0.0.10",
     "markdownlint-cli2-formatter-summarize": "^0.0.8",
-    "renovate": "^43.84.0"
+    "renovate": "^43.102.11"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",
