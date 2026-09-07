@@ -43,7 +43,8 @@ jobs:
           fetch-depth: 0 # we need tags for dynamic versioning
           show-progress: false
           ref: ${{ github.head_ref || github.ref_name }}
-          token: ${{ secrets.BOT_PAT }}
+          # Fork PRs cannot read ack secrets; default token is enough to run prek.
+          token: ${{ secrets.BOT_PAT || github.token }}
 
       # needed by our prek system hooks like toml
       - name: Install uv (cache)
