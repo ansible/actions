@@ -32,10 +32,10 @@ jobs:
   prek:
     runs-on: ubuntu-24.04
     environment:
-      name: ack # BOT_PAT, BOT_GPG_PRIVATE_KEY, BOT_GPG_PASSPHRASE
+      name: ack # ANSIBUDDY_BOT_PAT, ANSIBUDDY_GPG_PRIVATE_KEY, ANSIBUDDY_GPG_PASSPHRASE
       deployment: false
     permissions:
-      # git commit/push use BOT_PAT from checkout; GITHUB_TOKEN only comments
+      # git commit/push use ansibuddy PAT from checkout; GITHUB_TOKEN only comments
       pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -44,7 +44,7 @@ jobs:
           show-progress: false
           ref: ${{ github.head_ref || github.ref_name }}
           # Fork PRs cannot read ack secrets; default token is enough to run prek.
-          token: ${{ secrets.BOT_PAT || github.token }}
+          token: ${{ secrets.ANSIBUDDY_BOT_PAT || secrets.BOT_PAT || github.token }}
 
       # needed by our prek system hooks like toml
       - name: Install uv (cache)
@@ -76,8 +76,8 @@ jobs:
           github.event.pull_request.head.repo.full_name == github.repository
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7
         with:
-          gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          gpg_private_key: ${{ secrets.ANSIBUDDY_GPG_PRIVATE_KEY || secrets.BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.ANSIBUDDY_GPG_PASSPHRASE || secrets.BOT_GPG_PASSPHRASE }}
           git_user_signingkey: true
           git_commit_gpgsign: true
           git_committer_name: "ansibuddy"
