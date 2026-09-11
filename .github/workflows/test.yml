@@ -65,7 +65,7 @@ jobs:
       - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
         id: prek
         with:
-          extra-args: --all-files --color=always
+          extra-args: --all-files
         continue-on-error: true
 
       - name: Import GPG Key
