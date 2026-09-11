@@ -33,7 +33,6 @@ jobs:
     runs-on: ubuntu-24.04
     environment:
       name: ack # ANSIBUDDY_BOT_PAT, ANSIBUDDY_GPG_PRIVATE_KEY, ANSIBUDDY_GPG_PASSPHRASE
-      deployment: false
     permissions:
       # git commit/push use ansibuddy PAT from checkout; GITHUB_TOKEN only comments
       pull-requests: write
