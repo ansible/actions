@@ -22,9 +22,8 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  actions: write # needed to cancel current workflow run if needed
   checks: read
-  contents: write
+  contents: read
   id-token: write
   packages: write
   pull-requests: write
@@ -32,11 +31,19 @@ permissions:
 jobs:
   prek:
     runs-on: ubuntu-24.04
+    environment:
+      name: ack # ANSIBUDDY_BOT_PAT, ANSIBUDDY_GPG_PRIVATE_KEY, ANSIBUDDY_GPG_PASSPHRASE
+    permissions:
+      # git commit/push use ansibuddy PAT from checkout; GITHUB_TOKEN only comments
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # we need tags for dynamic versioning
           show-progress: false
+          ref: ${{ github.event.pull_request.head.sha || github.head_ref || github.ref_name }}
+          # Fork PRs cannot read ack secrets; default token is enough to run prek.
+          token: ${{ secrets.ANSIBUDDY_BOT_PAT || secrets.BOT_PAT || github.token }}
 
       # needed by our prek system hooks like toml
       - name: Install uv (cache)
@@ -55,52 +62,53 @@ jobs:
           [ ! -f package-lock.json ] || npm ci
           [ ! -f pnpm-lock.yaml ] || pnpm install --frozen-lockfile
 
-      - name: Install prek (cache)
-        uses: j178/prek-action@v2
-        with:
-          install-only: true
-
-      - name: Run prek and produce patch if needed
+      - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
         id: prek
-        env:
-          # For pull_request: PR branch; for push/merge_group: current branch ref name
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+        with:
+          extra-args: --all-files
+        continue-on-error: true
+
+      - name: Import GPG Key
+        if: >-
+          steps.prek.outcome == 'failure' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7
+        with:
+          gpg_private_key: ${{ secrets.ANSIBUDDY_GPG_PRIVATE_KEY || secrets.BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.ANSIBUDDY_GPG_PASSPHRASE || secrets.BOT_GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_committer_name: "ansibuddy"
+          git_committer_email: "107943535+ansibuddy@users.noreply.github.com"
+
+      - name: Commit & push changes
+        id: commit-and-push
+        if: >-
+          steps.prek.outcome == 'failure' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          set -x
-          EXIT_CODE=0
-          prek run --all-files --color=always || EXIT_CODE=$?
-          if [ -n "$(git status --porcelain)" ]; then
-              git config --global user.email ansible-devtools@redhat.com
-              git config --global user.name "Ansible DevTools"
-              git add -A
-              git commit -m 'Prek auto-fixes'
-              git format-patch -1 HEAD --stdout | tee .git/autofix.patch
-              echo "Rerunning prek after auto-fixes to verify their effectiveness"
-              EXIT_CODE=0
-              prek run --all-files --color=always || EXIT_CODE=$?
-              EXIT_CODE=$?
-          fi
-          exit $EXIT_CODE
+          git add .
+          git status
+          git commit -S -m "chore[bot]: auto-fix lint errors"
+          git push
 
-      - name: Upload artifact autofix-patch if present
-        if: hashFiles('.git/autofix.patch') != ''
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+      - name: react if linting errors were not fixed
+        if: steps.commit-and-push.outcome == 'failure'
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
         with:
-          name: autofix-patch
-          path: .git/autofix.patch
-          if-no-files-found: error
-          retention-days: "1"
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            @${{ github.actor }} I tried to fix the linting errors, but it didn't work. Please fix them manually.
+            See [CI log](https://github.com/${{ github.repository_owner }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
 
-      - name: Cancel current workflow if autofix was created
-        if: hashFiles('.git/autofix.patch') != ''
-        uses: actions/github-script@v9
-        with:
-          script: |
-            github.rest.actions.cancelWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId
-            });
+      - name: Fail if lint errors remain
+        if: >-
+          always() &&
+          steps.prek.outcome == 'failure' &&
+          steps.commit-and-push.outcome != 'success'
+        run: exit 1
 
   tox:
     uses: ansible/team-devtools/.github/workflows/tox.yml@main
