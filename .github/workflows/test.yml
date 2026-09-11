@@ -42,7 +42,7 @@ jobs:
         with:
           fetch-depth: 0 # we need tags for dynamic versioning
           show-progress: false
-          ref: ${{ github.head_ref || github.ref_name }}
+          ref: ${{ github.event.pull_request.head.sha || github.head_ref || github.ref_name }}
           # Fork PRs cannot read ack secrets; default token is enough to run prek.
           token: ${{ secrets.ANSIBUDDY_BOT_PAT || secrets.BOT_PAT || github.token }}
 
