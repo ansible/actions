@@ -1,0 +1,283 @@
+---
+name: "oasdiff: Detect Breaking Changes"
+
+on:
+  workflow_call:
+    inputs:
+      spec-path:
+        description: >
+          Path to the OpenAPI spec file in the repo (e.g., schema.json,
+          openapi/spec.yaml). For repos with multiple specs, call this
+          workflow once per spec file.
+        required: true
+        type: string
+      override-label:
+        description: >
+          GitHub label that, when present on the PR, allows breaking
+          changes to pass with a warning instead of blocking.
+        required: false
+        type: string
+        default: "breaking-change-approved"
+      oasdiff-version:
+        description: "oasdiff CLI version (pinned; override for exceptional cases only)"
+        required: false
+        type: string
+        default: "1.18.5"
+      fail-on-breaking:
+        description: "Fail the check on breaking changes. Set false for dry-run rollout."
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      has-breaking-changes:
+        description: "Whether breaking changes were detected"
+        value: ${{ jobs.detect.outputs.has-breaking-changes }}
+      was-overridden:
+        description: "Whether the override label was applied"
+        value: ${{ jobs.detect.outputs.was-overridden }}
+      breaking-count:
+        description: "Number of breaking changes detected"
+        value: ${{ jobs.detect.outputs.breaking-count }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect:
+    name: "oasdiff breaking change detection"
+    runs-on: ubuntu-24.04
+    outputs:
+      has-breaking-changes: ${{ steps.evaluate.outputs.has-breaking-changes }}
+      was-overridden: ${{ steps.evaluate.outputs.was-overridden }}
+      breaking-count: ${{ steps.evaluate.outputs.breaking-count }}
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Extract baseline spec from target branch
+        id: baseline
+        run: |
+          SPEC_PATH="${{ inputs.spec-path }}"
+          BASE_REF="${{ github.event.pull_request.base.ref || github.base_ref }}"
+
+          echo "Comparing ${SPEC_PATH} against branch ${BASE_REF}"
+
+          if git show "origin/${BASE_REF}:${SPEC_PATH}" > /tmp/base-spec 2>/dev/null; then
+            echo "has-baseline=true" >> "$GITHUB_OUTPUT"
+            echo "Baseline spec found on ${BASE_REF}"
+          else
+            echo "has-baseline=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No baseline spec found on ${BASE_REF} — skipping breaking change detection"
+          fi
+
+      - name: Install oasdiff
+        if: steps.baseline.outputs.has-baseline == 'true'
+        env:
+          OASDIFF_VERSION: ${{ inputs.oasdiff-version }}
+        run: |
+          EXPECTED_SHA256="9352233c1234bf5baf4d983078f7afff7bab4941abc253a14914f13ea31a3bf4"
+          DOWNLOAD_URL="https://github.com/Tufin/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+
+          curl -sSfL "${DOWNLOAD_URL}" -o /tmp/oasdiff.tar.gz
+
+          ACTUAL_SHA256=$(sha256sum /tmp/oasdiff.tar.gz | awk '{print $1}')
+          if [ "${ACTUAL_SHA256}" != "${EXPECTED_SHA256}" ]; then
+            echo "::error::oasdiff checksum mismatch! Expected ${EXPECTED_SHA256}, got ${ACTUAL_SHA256}"
+            exit 1
+          fi
+
+          tar -xzf /tmp/oasdiff.tar.gz -C /usr/local/bin oasdiff
+          chmod +x /usr/local/bin/oasdiff
+          oasdiff --help > /dev/null
+          rm /tmp/oasdiff.tar.gz
+
+      - name: Run oasdiff breaking change detection
+        id: oasdiff
+        if: steps.baseline.outputs.has-baseline == 'true'
+        run: |
+          SPEC_PATH="${{ inputs.spec-path }}"
+
+          # JSON output for structured results
+          oasdiff breaking /tmp/base-spec "${SPEC_PATH}" \
+            --format json > /tmp/breaking-raw.json 2>&1 || true
+
+          # Text output for human-readable summary
+          oasdiff breaking /tmp/base-spec "${SPEC_PATH}" \
+            --format text > /tmp/breaking-raw.txt 2>&1 || true
+
+          # Check exit code separately with --fail-on
+          if oasdiff breaking /tmp/base-spec "${SPEC_PATH}" --fail-on ERR > /dev/null 2>&1; then
+            echo "has-breaking=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-breaking=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build structured results
+        id: build-results
+        if: steps.baseline.outputs.has-baseline == 'true'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const hasBreaking = '${{ steps.oasdiff.outputs.has-breaking }}' === 'true';
+            const specPath = '${{ inputs.spec-path }}';
+            const baseRef = '${{ github.event.pull_request.base.ref || github.base_ref }}';
+            const headRef = '${{ github.head_ref || github.ref_name }}';
+            const oasdiffVersion = '${{ inputs.oasdiff-version }}';
+
+            // Load taxonomy mapping
+            const taxonomyPath = path.join(process.env.GITHUB_WORKSPACE, 'config', 'oasdiff-taxonomy-map.json');
+            let taxonomyMap = {};
+            if (fs.existsSync(taxonomyPath)) {
+              const taxonomy = JSON.parse(fs.readFileSync(taxonomyPath, 'utf8'));
+              taxonomyMap = taxonomy.mapping || {};
+            }
+
+            // Parse oasdiff JSON output
+            let rawChanges = [];
+            const rawJsonPath = '/tmp/breaking-raw.json';
+            if (fs.existsSync(rawJsonPath)) {
+              const rawContent = fs.readFileSync(rawJsonPath, 'utf8').trim();
+              if (rawContent) {
+                try {
+                  rawChanges = JSON.parse(rawContent);
+                  if (!Array.isArray(rawChanges)) rawChanges = [];
+                } catch (e) {
+                  core.warning(`Failed to parse oasdiff JSON output: ${e.message}`);
+                }
+              }
+            }
+
+            // Annotate changes with taxonomy categories
+            const changes = rawChanges.map(change => ({
+              id: change.id || 'unknown',
+              level: change.level || 'error',
+              text: change.text || '',
+              taxonomy_category: taxonomyMap[change.id] || 'Uncategorized',
+              path: change.path || change.operationId || '',
+              method: change.method || '',
+            }));
+
+            const results = {
+              has_breaking_changes: hasBreaking,
+              override_applied: false,
+              override_label: '${{ inputs.override-label }}',
+              oasdiff_version: oasdiffVersion,
+              base_ref: baseRef,
+              head_ref: headRef,
+              spec_path: specPath,
+              changes: changes,
+            };
+
+            fs.writeFileSync('/tmp/breaking-results.json', JSON.stringify(results, null, 2));
+
+            // Build human-readable summary
+            let summary = '';
+            if (hasBreaking && changes.length > 0) {
+              summary += `## Breaking Changes Detected\n\n`;
+              summary += `oasdiff found ${changes.length} breaking change(s) in \`${specPath}\`:\n\n`;
+
+              const byCategory = {};
+              for (const c of changes) {
+                const cat = c.taxonomy_category;
+                if (!byCategory[cat]) byCategory[cat] = [];
+                byCategory[cat].push(c);
+              }
+
+              for (const [cat, catChanges] of Object.entries(byCategory)) {
+                summary += `### ${cat}\n\n`;
+                for (const c of catChanges) {
+                  const location = [c.method, c.path].filter(Boolean).join(' ');
+                  summary += `- ${location ? `**${location}** — ` : ''}${c.text}\n`;
+                }
+                summary += '\n';
+              }
+
+              summary += `---\n\n`;
+              summary += `To proceed with an intentional breaking change, a member of \`aap-breaking-change-approvers\`\n`;
+              summary += `must apply the \`${{ inputs.override-label }}\` label. See the API Change Approval Process for details.\n`;
+            } else if (!hasBreaking) {
+              summary = `## No Breaking Changes\n\noasdiff found no breaking changes in \`${specPath}\`.\n`;
+            }
+
+            fs.writeFileSync('/tmp/breaking-summary.txt', summary);
+            core.setOutput('summary', summary);
+
+      - name: Check for override label
+        id: evaluate
+        if: always()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const hasBaseline = '${{ steps.baseline.outputs.has-baseline }}';
+
+            if (hasBaseline !== 'true') {
+              core.setOutput('has-breaking-changes', 'false');
+              core.setOutput('was-overridden', 'false');
+              core.setOutput('breaking-count', '0');
+              return;
+            }
+
+            const hasBreaking = '${{ steps.oasdiff.outputs.has-breaking }}' === 'true';
+            const overrideLabel = '${{ inputs.override-label }}';
+            const failOnBreaking = ${{ inputs.fail-on-breaking }};
+
+            // Check if override label is present on the PR
+            let overrideApplied = false;
+            if (context.payload.pull_request) {
+              const labels = context.payload.pull_request.labels || [];
+              overrideApplied = labels.some(l => l.name === overrideLabel);
+            }
+
+            // Update results file with override status
+            const resultsPath = '/tmp/breaking-results.json';
+            if (fs.existsSync(resultsPath)) {
+              const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+              results.override_applied = overrideApplied;
+              fs.writeFileSync(resultsPath, JSON.stringify(results, null, 2));
+            }
+
+            // Count breaking changes
+            let breakingCount = 0;
+            if (fs.existsSync(resultsPath)) {
+              const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+              breakingCount = (results.changes || []).length;
+            }
+
+            core.setOutput('has-breaking-changes', String(hasBreaking));
+            core.setOutput('was-overridden', String(overrideApplied));
+            core.setOutput('breaking-count', String(breakingCount));
+
+            if (hasBreaking && overrideApplied) {
+              core.warning(
+                `Breaking changes detected but override label "${overrideLabel}" is present. ` +
+                `Allowing merge with warning. ${breakingCount} breaking change(s) found.`
+              );
+            } else if (hasBreaking && failOnBreaking) {
+              core.setFailed(
+                `${breakingCount} breaking change(s) detected in the OpenAPI spec. ` +
+                `Apply the "${overrideLabel}" label to override, or resolve the breaking changes.`
+              );
+            } else if (hasBreaking && !failOnBreaking) {
+              core.warning(
+                `${breakingCount} breaking change(s) detected (dry-run mode — not blocking). ` +
+                `This would fail in production.`
+              );
+            }
+
+      - name: Upload results
+        if: always() && steps.baseline.outputs.has-baseline == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: breaking-change-results
+          path: |
+            /tmp/breaking-results.json
+            /tmp/breaking-summary.txt
+          retention-days: 30
