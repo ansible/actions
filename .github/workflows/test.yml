@@ -124,6 +124,28 @@ jobs:
         image
       platforms: linux,macos
 
+  oasdiff:
+    needs: prek
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          show-progress: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+
+      - name: Install oasdiff
+        run: |
+          curl -sSfL "https://github.com/Tufin/oasdiff/releases/download/v1.18.5/oasdiff_1.18.5_linux_amd64.tar.gz" -o /tmp/oasdiff.tar.gz
+          tar -xzf /tmp/oasdiff.tar.gz -C /usr/local/bin oasdiff
+          chmod +x /usr/local/bin/oasdiff
+          oasdiff --help > /dev/null
+          rm /tmp/oasdiff.tar.gz
+
+      - name: Run oasdiff tests
+        run: uv run pytest tests/oasdiff/ -v
+
   matrix:
     needs: prek
     runs-on: ubuntu-24.04
@@ -426,6 +448,7 @@ jobs:
       - tox
       - matrix
       - upload-artifact
+      - oasdiff
     runs-on: ubuntu-24.04
     steps:
       - name: Remove test artifacts
