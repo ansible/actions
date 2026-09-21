@@ -1,0 +1,115 @@
+---
+name: "oasdiff: Post Breaking Change Comment"
+
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: "Name of the artifact uploaded by the detection workflow"
+        required: false
+        type: string
+        default: "breaking-change-results"
+
+permissions:
+  pull-requests: write
+  actions: read
+
+jobs:
+  comment:
+    name: "Post breaking change PR comment"
+    runs-on: ubuntu-24.04
+    if: >-
+      github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: Download results artifact
+        id: download
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ inputs.artifact-name }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+        continue-on-error: true
+
+      - name: Post or update PR comment
+        if: steps.download.outcome == 'success'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read results
+            const resultsPath = 'breaking-results.json';
+            const summaryPath = 'breaking-summary.txt';
+
+            if (!fs.existsSync(resultsPath)) {
+              core.info('No breaking-results.json found, skipping comment');
+              return;
+            }
+
+            const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+            let summary = '';
+            if (fs.existsSync(summaryPath)) {
+              summary = fs.readFileSync(summaryPath, 'utf8');
+            }
+
+            if (!results.has_breaking_changes && !summary) {
+              core.info('No breaking changes and no summary, skipping comment');
+              return;
+            }
+
+            // Find the PR number from the workflow run
+            const runId = context.payload.workflow_run.id;
+            const prNumber = context.payload.workflow_run.pull_requests?.[0]?.number;
+
+            if (!prNumber) {
+              core.warning('Could not determine PR number from workflow_run event');
+              return;
+            }
+
+            // Build comment body
+            const marker = '<!-- oasdiff-breaking-change-check -->';
+            let body = `${marker}\n\n`;
+
+            if (results.has_breaking_changes) {
+              body += summary;
+
+              if (results.override_applied) {
+                body += `\n\n> **Override applied:** The \`${results.override_label}\` label is present. `;
+                body += `This PR will pass the breaking change check with a warning.\n`;
+              }
+            } else {
+              body += `## No Breaking Changes\n\n`;
+              body += `oasdiff found no breaking changes in \`${results.spec_path}\`.\n`;
+            }
+
+            body += `\n<sub>oasdiff v${results.oasdiff_version} | `;
+            body += `base: \`${results.base_ref}\` | `;
+            body += `spec: \`${results.spec_path}\`</sub>\n`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+
+            const existingComment = comments.find(c => c.body?.includes(marker));
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body,
+              });
+              core.info(`Updated existing comment ${existingComment.id}`);
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body,
+              });
+              core.info(`Created new comment on PR #${prNumber}`);
+            }
