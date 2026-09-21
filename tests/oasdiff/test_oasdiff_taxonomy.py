@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -50,7 +51,7 @@ def test_base_spec_is_valid_yaml() -> None:
     """Base test spec must be parseable."""
     import yaml
 
-    data = yaml.safe_load(BASE_SPEC.read_text())
+    data: dict[str, Any] = yaml.safe_load(BASE_SPEC.read_text())  # type: ignore[no-untyped-call]
     assert data["openapi"].startswith("3.")
     assert "paths" in data
     assert "components" in data
@@ -60,7 +61,7 @@ def test_base_spec_is_valid_yaml() -> None:
 class TestOasdiffDetection:
     """Integration tests that require oasdiff CLI to be installed."""
 
-    def _run_oasdiff(self, revised_spec: Path) -> dict:
+    def _run_oasdiff(self, revised_spec: Path) -> dict[str, Any]:
         """Run oasdiff breaking and return parsed JSON output."""
         result = subprocess.run(
             [
@@ -75,7 +76,8 @@ class TestOasdiffDetection:
             text=True,
         )
         if result.stdout.strip():
-            return json.loads(result.stdout)
+            parsed: dict[str, Any] = json.loads(result.stdout)
+            return parsed
         return {}
 
     def _has_breaking_changes(self, revised_spec: Path) -> bool:
