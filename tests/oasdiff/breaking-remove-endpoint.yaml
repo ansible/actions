@@ -1,0 +1,77 @@
+openapi: "3.0.3"
+info:
+  title: Test API
+  version: "1.0.0"
+paths:
+  /api/v1/jobs:
+    get:
+      summary: List jobs
+      operationId: listJobs
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - count
+                  - results
+                properties:
+                  count:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Job"
+  /api/v1/jobs/{id}:
+    get:
+      summary: Get a job
+      operationId: getJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+components:
+  schemas:
+    Job:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - description
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - running
+            - successful
+            - failed
+            - canceled
+        description:
+          type: string
+        created:
+          type: string
+          format: date-time
