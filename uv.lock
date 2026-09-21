@@ -38,6 +38,7 @@ dev = [
     { name = "coverage-enable-subprocess" },
     { name = "pytest" },
     { name = "pytest-xdist" },
+    { name = "pyyaml" },
 ]
 lint = [
     { name = "actions-toolkit" },
@@ -67,6 +68,7 @@ dev = [
     { name = "coverage-enable-subprocess" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-xdist", specifier = ">=2.1.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
 ]
 lint = [
     { name = "actions-toolkit", specifier = ">=0.1.15" },
