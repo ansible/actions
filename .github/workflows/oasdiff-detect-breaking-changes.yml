@@ -255,20 +255,38 @@ jobs:
             core.setOutput('was-overridden', String(overrideApplied));
             core.setOutput('breaking-count', String(breakingCount));
 
+            // Build category list for error/warning messages
+            let categoryNames = [];
+            if (fs.existsSync(resultsPath)) {
+              const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+              const cats = new Set((results.changes || []).map(c => c.taxonomy_category));
+              categoryNames = [...cats];
+            }
+            const categoryList = categoryNames.length > 0
+              ? categoryNames.join(', ')
+              : 'Uncategorized';
+
+            const docsUrl = 'https://github.com/ansible/actions/blob/main/README.md#breaking-change-detection';
+
             if (hasBreaking && overrideApplied) {
               core.warning(
-                `Breaking changes detected but override label "${overrideLabel}" is present. ` +
-                `Allowing merge with warning. ${breakingCount} breaking change(s) found.`
+                `Breaking changes detected but "${overrideLabel}" label is present — ` +
+                `allowing merge with warning.\n` +
+                `Found ${breakingCount} breaking change(s): ${categoryList}.\n` +
+                `See the job summary for details or review the guidelines: ${docsUrl}`
               );
             } else if (hasBreaking && failOnBreaking) {
               core.setFailed(
-                `${breakingCount} breaking change(s) detected in the OpenAPI spec. ` +
-                `Apply the "${overrideLabel}" label to override, or resolve the breaking changes.`
+                `${breakingCount} breaking change(s) detected: ${categoryList}.\n` +
+                `See the job summary tab for full details.\n` +
+                `To override, apply the "${overrideLabel}" label.\n` +
+                `Guidelines: ${docsUrl}`
               );
             } else if (hasBreaking && !failOnBreaking) {
               core.warning(
-                `${breakingCount} breaking change(s) detected (dry-run mode — not blocking). ` +
-                `This would fail in production.`
+                `${breakingCount} breaking change(s) detected (dry-run mode — not blocking): ${categoryList}.\n` +
+                `This would fail in production. See job summary for details.\n` +
+                `Guidelines: ${docsUrl}`
               );
             }
 
