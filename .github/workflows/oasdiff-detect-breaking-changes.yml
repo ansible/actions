@@ -161,7 +161,7 @@ jobs:
               text: change.text || '',
               taxonomy_category: taxonomyMap[change.id] || 'Uncategorized',
               path: change.path || change.operationId || '',
-              method: change.method || '',
+              method: change.operation || change.method || '',
             }));
 
             const results = {

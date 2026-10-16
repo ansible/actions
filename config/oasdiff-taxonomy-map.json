@@ -17,6 +17,7 @@
     "request-property-enum-value-removed": "Category 5: Enum Value Removal or Splitting",
     "response-property-removed": "Category 2: Response Field Removal",
     "response-required-property-removed": "Category 2: Response Field Removal",
+    "response-optional-property-removed": "Category 2: Response Field Removal",
     "response-property-became-nullable": "Category 4: Response Type Changes",
     "response-property-type-changed": "Category 4: Response Type Changes",
     "response-property-became-optional": "Category 4: Response Type Changes",
