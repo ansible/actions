@@ -200,8 +200,10 @@ jobs:
               }
 
               summary += `---\n\n`;
-              summary += `To proceed with an intentional breaking change, a member of \`aap-breaking-change-approvers\`\n`;
-              summary += `must apply the \`${{ inputs.override-label }}\` label. See the API Change Approval Process for details.\n`;
+              summary += `To proceed with an intentional breaking change, a member of\n`;
+              summary += `[Staff Engineering Leads](https://github.com/orgs/ansible/teams/ansible-staff-eng-leads)\n`;
+              summary += `must apply the \`${{ inputs.override-label }}\` label after completing the\n`;
+              summary += `[API Change Approval Process](https://handbook.eng.ansible.com/proposals/AAP-53276-api-change-approval-process).\n`;
             } else if (!hasBreaking) {
               summary = `## No Breaking Changes\n\noasdiff found no breaking changes in \`${specPath}\`.\n`;
             }
@@ -266,7 +268,7 @@ jobs:
               ? categoryNames.join(', ')
               : 'Uncategorized';
 
-            const docsUrl = 'https://github.com/ansible/actions/blob/main/README.md#breaking-change-detection';
+            const docsUrl = 'https://handbook.eng.ansible.com/proposals/AAP-53276-api-change-approval-process';
 
             if (hasBreaking && overrideApplied) {
               core.warning(
