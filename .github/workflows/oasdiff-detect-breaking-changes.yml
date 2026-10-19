@@ -53,7 +53,7 @@ jobs:
       breaking-count: ${{ steps.evaluate.outputs.breaking-count }}
     steps:
       - name: Checkout PR branch
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           show-progress: false
@@ -102,16 +102,11 @@ jobs:
           SPEC_PATH: ${{ inputs.spec-path }}
         run: |
           oasdiff breaking /tmp/base-spec "${SPEC_PATH}" \
-            --format json > /tmp/breaking-raw.json 2>/tmp/oasdiff-stderr.log || true
-
-          oasdiff breaking /tmp/base-spec "${SPEC_PATH}" \
-            --format text > /tmp/breaking-raw.txt 2>/dev/null || true
-
-          if oasdiff breaking /tmp/base-spec "${SPEC_PATH}" --fail-on ERR > /dev/null 2>&1; then
-            echo "has-breaking=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has-breaking=true" >> "$GITHUB_OUTPUT"
-          fi
+            --format json \
+            --fail-on ERR \
+            > /tmp/breaking-raw.json 2>/tmp/oasdiff-stderr.log \
+            && echo "has-breaking=false" >> "$GITHUB_OUTPUT" \
+            || echo "has-breaking=true" >> "$GITHUB_OUTPUT"
 
           if [ -s /tmp/oasdiff-stderr.log ]; then
             echo "::warning::oasdiff stderr: $(cat /tmp/oasdiff-stderr.log)"

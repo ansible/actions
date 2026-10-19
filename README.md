@@ -60,7 +60,9 @@ jobs:
 | `fail-on-breaking` | No | `true` | Set `false` for dry-run mode |
 
 **Override mechanism:** When a PR has the `breaking-change-approved` label
-(applied by `aap-breaking-change-approvers` team members), breaking changes
-pass with a warning instead of blocking.
+(applied by [`ansible-staff-eng-leads`](https://github.com/orgs/ansible/teams/ansible-staff-eng-leads)
+team members after completing the
+[API Change Approval Process](https://handbook.eng.ansible.com/proposals/AAP-53276-api-change-approval-process)),
+breaking changes pass with a warning instead of blocking.
 
 ## Components
