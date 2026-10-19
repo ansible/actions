@@ -15,7 +15,6 @@ BASE_SPEC = TESTS_DIR / "base-spec.yaml"
 
 
 def _oasdiff_available() -> bool:
-    """Check if oasdiff CLI is installed."""
     try:
         subprocess.run(
             ["oasdiff", "--help"],
@@ -35,7 +34,9 @@ def test_taxonomy_map_is_valid_json() -> None:
     assert len(data["mapping"]) > 0
     for key, value in data["mapping"].items():
         assert isinstance(key, str), f"Key {key!r} must be a string"
-        assert value.startswith("Category "), f"Value {value!r} must start with 'Category '"
+        assert value.startswith("Category "), (
+            f"Value {value!r} must start with 'Category '"
+        )
 
 
 def test_taxonomy_map_covers_all_categories() -> None:
@@ -43,7 +44,9 @@ def test_taxonomy_map_covers_all_categories() -> None:
     data = json.loads(TAXONOMY_MAP_PATH.read_text())
     categories_present = {v for v in data["mapping"].values()}
     for cat_num in [1, 2, 3, 4, 5, 6, 7, 8, 10]:
-        matches = [c for c in categories_present if c.startswith(f"Category {cat_num}:")]
+        matches = [
+            c for c in categories_present if c.startswith(f"Category {cat_num}:")
+        ]
         assert len(matches) > 0, f"Category {cat_num} has no mapping entries"
 
 
@@ -62,7 +65,6 @@ class TestOasdiffDetection:
     """Integration tests that require oasdiff CLI to be installed."""
 
     def _run_oasdiff(self, revised_spec: Path) -> dict[str, Any]:
-        """Run oasdiff breaking and return parsed JSON output."""
         result = subprocess.run(
             [
                 "oasdiff",
@@ -81,7 +83,6 @@ class TestOasdiffDetection:
         return {}
 
     def _has_breaking_changes(self, revised_spec: Path) -> bool:
-        """Return True if oasdiff detects breaking changes."""
         result = subprocess.run(
             [
                 "oasdiff",
