@@ -2,11 +2,11 @@
 
 import json
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 TESTS_DIR = Path(__file__).parent
 CONFIG_DIR = TESTS_DIR.parent.parent / "config"
@@ -42,7 +42,7 @@ def test_taxonomy_map_is_valid_json() -> None:
 def test_taxonomy_map_covers_all_categories() -> None:
     """Taxonomy mapping must cover at least categories 1-8, 10."""
     data = json.loads(TAXONOMY_MAP_PATH.read_text())
-    categories_present = {v for v in data["mapping"].values()}
+    categories_present = set(data["mapping"].values())
     for cat_num in [1, 2, 3, 4, 5, 6, 7, 8, 10]:
         matches = [
             c for c in categories_present if c.startswith(f"Category {cat_num}:")
@@ -52,8 +52,6 @@ def test_taxonomy_map_covers_all_categories() -> None:
 
 def test_base_spec_is_valid_yaml() -> None:
     """Base test spec must be parseable."""
-    import yaml
-
     data: dict[str, Any] = yaml.safe_load(BASE_SPEC.read_text())  # type: ignore[no-untyped-call]
     assert data["openapi"].startswith("3.")
     assert "paths" in data
@@ -76,6 +74,7 @@ class TestOasdiffDetection:
             ],
             capture_output=True,
             text=True,
+            check=False,
         )
         if result.stdout.strip():
             parsed: dict[str, Any] = json.loads(result.stdout)
@@ -93,6 +92,7 @@ class TestOasdiffDetection:
                 "ERR",
             ],
             capture_output=True,
+            check=False,
         )
         return result.returncode != 0
 

@@ -3,6 +3,9 @@ Sorin
 codespell
 docstrings
 envlist
+mediatype
 minmax
+nonbreaking
+oasdiff
 pydoclint
 showlocals

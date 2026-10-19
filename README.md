@@ -55,7 +55,7 @@ jobs:
 | Input | Required | Default | Description |
 |---|---|---|---|
 | `spec-path` | Yes | — | Path to the OpenAPI spec file |
-| `override-label` | No | `breaking-change-approved` | Label that bypasses the check |
+| `override-label` | No | `breaking-change-approved` | Override label |
 | `oasdiff-version` | No | `1.18.5` | oasdiff CLI version |
 | `fail-on-breaking` | No | `true` | Set `false` for dry-run mode |
 
