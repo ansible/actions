@@ -37,7 +37,6 @@ jobs:
           script: |
             const fs = require('fs');
 
-            // Read results
             const resultsPath = 'breaking-results.json';
             const summaryPath = 'breaking-summary.txt';
 
@@ -57,16 +56,40 @@ jobs:
               return;
             }
 
-            // Find the PR number from the workflow run
-            const runId = context.payload.workflow_run.id;
-            const prNumber = context.payload.workflow_run.pull_requests?.[0]?.number;
+            // Resolve PR number — pull_requests[] is often empty for fork PRs
+            let prNumber = context.payload.workflow_run.pull_requests?.[0]?.number;
 
             if (!prNumber) {
-              core.warning('Could not determine PR number from workflow_run event');
+              const headSha = context.payload.workflow_run.head_sha;
+              const headBranch = context.payload.workflow_run.head_branch;
+              core.info(`pull_requests empty, searching for PR by head SHA ${headSha}`);
+
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                sort: 'updated',
+                direction: 'desc',
+                per_page: 30,
+              });
+
+              const match = prs.find(pr => pr.head.sha === headSha)
+                || prs.find(pr => pr.head.ref === headBranch);
+
+              if (match) {
+                prNumber = match.number;
+                core.info(`Resolved PR #${prNumber} from head SHA/branch lookup`);
+              }
+            }
+
+            if (!prNumber) {
+              core.warning(
+                'Could not determine PR number from workflow_run event or API lookup. ' +
+                'Breaking change results are available in the workflow run artifacts.'
+              );
               return;
             }
 
-            // Build comment body
             const marker = '<!-- oasdiff-breaking-change-check -->';
             let body = `${marker}\n\n`;
 
@@ -86,7 +109,6 @@ jobs:
             body += `base: \`${results.base_ref}\` | `;
             body += `spec: \`${results.spec_path}\`</sub>\n`;
 
-            // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
