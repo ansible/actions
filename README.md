@@ -53,7 +53,7 @@ jobs:
 **Inputs (`oasdiff-detect-breaking-changes.yml`):**
 
 | Input | Required | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `spec-path` | Yes | — | Path to the OpenAPI spec file |
 | `override-label` | No | `breaking-change-approved` | Override label |
 | `oasdiff-version` | No | `1.18.5` | oasdiff CLI version |

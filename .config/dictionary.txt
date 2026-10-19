@@ -6,6 +6,7 @@ envlist
 mediatype
 minmax
 nonbreaking
+Oasdiff
 oasdiff
 pydoclint
 showlocals
