@@ -24,11 +24,15 @@ branch.
 
 ## Inputs
 
+<!-- markdownlint-disable MD013 -->
+
 | Input | Required | Default | Description |
 |---|---|---|---|
 | `spec` | Yes | — | Path to the OpenAPI spec file relative to the repo root. Supports glob patterns (e.g. `api/openapi*.yaml`). |
 | `oasdiff-version` | No | `latest` | oasdiff version to install. |
 | `approval-label` | No | `breaking-change-approved` | GitHub label that signals an approved breaking change. |
+
+<!-- markdownlint-enable MD013 -->
 
 ## Permissions
 
@@ -95,7 +99,7 @@ jobs:
 Per the API Change Approval Process, only a member of the
 [ansible-staff-eng-leads](https://github.com/orgs/ansible/teams/ansible-staff-eng-leads/members)
 GitHub team may apply the `breaking-change-approved` label, and only after
-Sr. Director-level sign-off from both Engineering and BU leadership.
+Sr. Director-level sign-off from both Engineering and Business Unit leadership.
 
 ## See also
 

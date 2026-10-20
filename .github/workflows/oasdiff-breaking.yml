@@ -149,7 +149,7 @@ jobs:
               echo "## Blocked"
               echo "The \`${APPROVAL_LABEL}\` label is **missing**."
               echo ""
-              echo "An approving member from [ansible-staff-eng-leads](https://github.com/orgs/ansible/teams/ansible-staff-eng-leads/members) must apply the label after Sr. Director-level sign-off from both Engineering and BU leadership."
+              echo "An approving member from [ansible-staff-eng-leads](https://github.com/orgs/ansible/teams/ansible-staff-eng-leads/members) must apply the label after Sr. Director-level sign-off from both Engineering and Business Unit leadership."
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
