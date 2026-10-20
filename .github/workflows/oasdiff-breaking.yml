@@ -73,6 +73,8 @@ jobs:
           SPEC_PATTERN: ${{ inputs.spec }}
         run: |
           shopt -s nullglob globstar
+          # Intentional word-splitting for glob expansion.
+          # shellcheck disable=SC2206
           files=( $SPEC_PATTERN )
           if [ ${#files[@]} -eq 0 ]; then
             echo "::error::No spec files matched pattern: ${SPEC_PATTERN}"
