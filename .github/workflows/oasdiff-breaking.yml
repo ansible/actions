@@ -1,0 +1,153 @@
+---
+# Reusable workflow: oasdiff breaking-change gate
+#
+# Runs oasdiff on OpenAPI spec changes in a PR. If a breaking change is
+# detected and the `breaking-change-approved` label is absent, the check
+# fails. Callers invoke via:
+#
+#   uses: ansible/actions/.github/workflows/oasdiff-breaking.yml@<ref>
+#   with:
+#     spec: path/to/openapi.yaml
+#
+# See: ansible/handbook proposal AAP-53276 §5 (CI enforcement)
+name: oasdiff breaking-change gate
+
+on:
+  workflow_call:
+    inputs:
+      spec:
+        description: >-
+          Path to the OpenAPI spec file, relative to the repo root.
+          Supports glob patterns (e.g. "api/openapi*.yaml") when a repo
+          has multiple spec files — each match is checked independently.
+        required: true
+        type: string
+      oasdiff-version:
+        description: "oasdiff version to install (default: latest)"
+        required: false
+        type: string
+        default: "latest"
+      approval-label:
+        description: >-
+          GitHub label that signals the breaking change has been approved.
+        required: false
+        type: string
+        default: "breaking-change-approved"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  oasdiff:
+    name: oasdiff breaking-change check
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Guard – require PR context
+        if: github.event.pull_request.number == ''
+        run: |
+          echo "::error::This workflow requires a pull_request event context."
+          exit 1
+
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Install oasdiff
+        env:
+          OASDIFF_VERSION: ${{ inputs.oasdiff-version }}
+        run: |
+          if [ "$OASDIFF_VERSION" = "latest" ]; then
+            go install github.com/oasdiff/oasdiff@latest
+          else
+            go install "github.com/oasdiff/oasdiff@v${OASDIFF_VERSION}"
+          fi
+          oasdiff --version
+
+      - name: Resolve spec files
+        id: specs
+        env:
+          SPEC_PATTERN: ${{ inputs.spec }}
+        run: |
+          shopt -s nullglob globstar
+          files=( $SPEC_PATTERN )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::No spec files matched pattern: ${SPEC_PATTERN}"
+            exit 1
+          fi
+          printf '%s\n' "${files[@]}" | tee "$RUNNER_TEMP/spec_files.txt"
+          echo "count=${#files[@]}" >> "$GITHUB_OUTPUT"
+
+      - name: Detect breaking changes
+        id: breaking
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: |
+          found_breaking=false
+          summary=""
+
+          while IFS= read -r spec; do
+            echo "::group::Checking ${spec}"
+
+            if ! git show "${BASE_REF}:${spec}" > /dev/null 2>&1; then
+              echo "Spec is new on this branch — nothing to break."
+              echo "::endgroup::"
+              continue
+            fi
+
+            base_spec="$RUNNER_TEMP/base_$(echo "$spec" | tr '/' '_')"
+            git show "${BASE_REF}:${spec}" > "$base_spec"
+
+            output="$RUNNER_TEMP/oasdiff_out_$(echo "$spec" | tr '/' '_').txt"
+            if oasdiff breaking "$base_spec" "$spec" --fail-on ERR 2>&1 | tee "$output"; then
+              echo "No breaking changes in ${spec}."
+            else
+              echo "::warning::Breaking change(s) detected in ${spec}"
+              found_breaking=true
+              summary+="### ${spec}"$'\n\n'
+              summary+='```'$'\n'
+              summary+="$(cat "$output")"$'\n'
+              summary+='```'$'\n\n'
+            fi
+            echo "::endgroup::"
+          done < "$RUNNER_TEMP/spec_files.txt"
+
+          echo "found=${found_breaking}" >> "$GITHUB_OUTPUT"
+
+          if [ "$found_breaking" = "true" ]; then
+            {
+              echo "## Breaking changes detected"
+              echo ""
+              echo "$summary"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## No breaking changes detected" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check approval label
+        if: steps.breaking.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVAL_LABEL: ${{ inputs.approval-label }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          labels=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}" --jq '.labels[].name')
+
+          if echo "$labels" | grep -qxF "$APPROVAL_LABEL"; then
+            echo "::notice::Label '${APPROVAL_LABEL}' is present — breaking change is approved."
+            echo "## Approved" >> "$GITHUB_STEP_SUMMARY"
+            echo "The \`${APPROVAL_LABEL}\` label is present." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::Breaking change detected but the '${APPROVAL_LABEL}' label is missing. An approving member from ansible-staff-eng-leads must apply the label after Sr. Director-level sign-off. See: ansible/handbook — AAP-53276 §2"
+            {
+              echo "## Blocked"
+              echo "The \`${APPROVAL_LABEL}\` label is **missing**."
+              echo ""
+              echo "An approving member from [ansible-staff-eng-leads](https://github.com/orgs/ansible/teams/ansible-staff-eng-leads/members) must apply the label after Sr. Director-level sign-off from both Engineering and BU leadership."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
