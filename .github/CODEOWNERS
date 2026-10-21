@@ -1,1 +1,6 @@
 * @ssbarnea @ansible/devtools
+
+# ANSTRAT-2346 API contract workflows
+.github/workflows/oasdiff-* @ansible/anstrat-2346-pod @ansible/devtools
+config/oasdiff-* @ansible/anstrat-2346-pod @ansible/devtools
+tests/oasdiff/ @ansible/anstrat-2346-pod @ansible/devtools
