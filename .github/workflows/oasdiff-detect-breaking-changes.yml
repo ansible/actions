@@ -101,15 +101,25 @@ jobs:
         env:
           SPEC_PATH: ${{ inputs.spec-path }}
         run: |
+          set +e
           oasdiff breaking /tmp/base-spec "${SPEC_PATH}" \
             --format json \
             --fail-on ERR \
-            > /tmp/breaking-raw.json 2>/tmp/oasdiff-stderr.log \
-            && echo "has-breaking=false" >> "$GITHUB_OUTPUT" \
-            || echo "has-breaking=true" >> "$GITHUB_OUTPUT"
+            > /tmp/breaking-raw.json 2>/tmp/oasdiff-stderr.log
+          OASDIFF_EXIT=$?
+          set -e
 
           if [ -s /tmp/oasdiff-stderr.log ]; then
             echo "::warning::oasdiff stderr: $(cat /tmp/oasdiff-stderr.log)"
+          fi
+
+          if [ "${OASDIFF_EXIT}" -eq 0 ]; then
+            echo "has-breaking=false" >> "$GITHUB_OUTPUT"
+          elif [ "${OASDIFF_EXIT}" -eq 1 ]; then
+            echo "has-breaking=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::oasdiff failed with exit code ${OASDIFF_EXIT} (parse error or unexpected failure)"
+            exit "${OASDIFF_EXIT}"
           fi
 
       - name: Build structured results
@@ -237,26 +247,28 @@ jobs:
 
       - name: Check for override label
         id: evaluate
-        if: always()
+        if: >-
+          !cancelled()
+          && steps.baseline.outputs.has-baseline == 'true'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         env:
-          HAS_BASELINE: ${{ steps.baseline.outputs.has-baseline }}
           HAS_BREAKING: ${{ steps.oasdiff.outputs.has-breaking }}
           OVERRIDE_LABEL: ${{ inputs.override-label }}
           FAIL_ON_BREAKING: ${{ inputs.fail-on-breaking }}
         with:
           script: |
             const fs = require('fs');
-            const hasBaseline = process.env.HAS_BASELINE;
 
-            if (hasBaseline !== 'true') {
-              core.setOutput('has-breaking-changes', 'false');
-              core.setOutput('was-overridden', 'false');
-              core.setOutput('breaking-count', '0');
+            const hasBreakingRaw = process.env.HAS_BREAKING;
+            if (!hasBreakingRaw) {
+              core.setFailed(
+                'oasdiff step did not produce output — an earlier step may have failed. ' +
+                'Check the install and detection steps above for errors.'
+              );
               return;
             }
 
-            const hasBreaking = process.env.HAS_BREAKING === 'true';
+            const hasBreaking = hasBreakingRaw === 'true';
             const overrideLabel = process.env.OVERRIDE_LABEL;
             const failOnBreaking = process.env.FAIL_ON_BREAKING === 'true';
 

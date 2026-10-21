@@ -1,6 +1,7 @@
 """Tests for oasdiff taxonomy mapping and breaking change detection."""
 
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -9,8 +10,12 @@ import pytest
 import yaml
 
 TESTS_DIR = Path(__file__).parent
-CONFIG_DIR = TESTS_DIR.parent.parent / "config"
+REPO_ROOT = TESTS_DIR.parent.parent
+CONFIG_DIR = REPO_ROOT / "config"
 TAXONOMY_MAP_PATH = CONFIG_DIR / "oasdiff-taxonomy-map.json"
+WORKFLOW_PATH = (
+    REPO_ROOT / ".github" / "workflows" / "oasdiff-detect-breaking-changes.yml"
+)
 BASE_SPEC = TESTS_DIR / "base-spec.yaml"
 
 
@@ -48,6 +53,45 @@ def test_taxonomy_map_covers_all_categories() -> None:
             c for c in categories_present if c.startswith(f"Category {cat_num}:")
         ]
         assert len(matches) > 0, f"Category {cat_num} has no mapping entries"
+
+
+def _extract_inline_taxonomy(workflow_text: str) -> dict[str, str]:
+    """Extract key-value pairs from the inline taxonomyMap in the workflow."""
+    pairs = re.findall(
+        r'"([a-z][a-z0-9-]+)":\s*"(Category \d+:[^"]+)"',
+        workflow_text,
+    )
+    return dict(pairs)
+
+
+def test_taxonomy_map_in_sync_with_workflow() -> None:
+    """Inline taxonomy in the workflow must match the JSON reference file."""
+    json_data = json.loads(TAXONOMY_MAP_PATH.read_text())
+    json_mapping = json_data["mapping"]
+
+    workflow_text = WORKFLOW_PATH.read_text()
+    inline_mapping = _extract_inline_taxonomy(workflow_text)
+
+    assert inline_mapping, "Could not extract inline taxonomy from workflow"
+
+    json_keys = set(json_mapping.keys())
+    inline_keys = set(inline_mapping.keys())
+
+    missing_from_workflow = json_keys - inline_keys
+    assert not missing_from_workflow, (
+        f"Keys in JSON but missing from workflow inline map: {missing_from_workflow}"
+    )
+
+    extra_in_workflow = inline_keys - json_keys
+    assert not extra_in_workflow, (
+        f"Keys in workflow inline map but missing from JSON: {extra_in_workflow}"
+    )
+
+    for key in json_keys:
+        assert json_mapping[key] == inline_mapping[key], (
+            f"Value mismatch for {key!r}: "
+            f"JSON={json_mapping[key]!r}, workflow={inline_mapping[key]!r}"
+        )
 
 
 def test_base_spec_is_valid_yaml() -> None:
