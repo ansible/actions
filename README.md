@@ -59,6 +59,10 @@ jobs:
 | `oasdiff-version` | No | `1.18.5` | oasdiff CLI version |
 | `fail-on-breaking` | No | `true` | Set `false` for dry-run mode |
 
+**Taxonomy reference:** `config/oasdiff-taxonomy-map.json` is the reference
+copy of the oasdiff-to-category mapping, validated by CI tests against the
+inline copy in the workflow.
+
 **Override mechanism:** When a PR has the `breaking-change-approved` label
 (applied by [`ansible-staff-eng-leads`](https://github.com/orgs/ansible/teams/ansible-staff-eng-leads)
 team members after completing the

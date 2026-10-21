@@ -205,7 +205,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["SLF001", "S101", "FBT001", "S607"]
+"tests/**/*.py" = ["SLF001", "S101", "FBT001"]
+"tests/oasdiff/**/*.py" = ["S607"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
