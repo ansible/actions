@@ -56,7 +56,6 @@ def test_taxonomy_map_covers_all_categories() -> None:
 
 
 def _extract_inline_taxonomy(workflow_text: str) -> dict[str, str]:
-    """Extract key-value pairs from the inline taxonomyMap in the workflow."""
     pairs = re.findall(
         r'"([a-z][a-z0-9-]+)":\s*"(Category \d+:[^"]+)"',
         workflow_text,
