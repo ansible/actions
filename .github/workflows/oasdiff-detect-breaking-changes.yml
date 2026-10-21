@@ -215,7 +215,8 @@ jobs:
             let summary = '';
             if (hasBreaking && changes.length > 0) {
               summary += `## Breaking Changes Detected\n\n`;
-              summary += `oasdiff found ${changes.length} breaking change(s) in \`${specPath}\`:\n\n`;
+              summary += `oasdiff found ${changes.length} breaking change(s) in \`${specPath}\`\n`;
+              summary += `([category definitions](https://github.com/ansible/handbook/pull/1628)):\n\n`;
 
               const byCategory = {};
               for (const c of changes) {
