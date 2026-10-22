@@ -1,0 +1,64 @@
+---
+name: approval-label-authorization
+
+on:
+  workflow_call:
+    inputs:
+      approval-label:
+        description: Label whose applier must belong to the approval team.
+        required: false
+        type: string
+        default: breaking-change-approved
+      team-org:
+        description: GitHub organization that owns the approval team.
+        required: false
+        type: string
+        default: ansible
+      team-slug:
+        description: GitHub slug of the team allowed to apply or remove the label.
+        required: false
+        type: string
+        default: ansible-staff-eng-leads
+    secrets:
+      team-membership-token:
+        description: Token with read:org access to verify team membership.
+        required: true
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  approval-label-authorization:
+    name: approval-label-authorization
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      (github.event.action == 'labeled' || github.event.action == 'unlabeled') &&
+      github.event.label.name == inputs.approval-label
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify the label actor belongs to the approval team
+        env:
+          GH_TOKEN: ${{ secrets.team-membership-token }}
+          ACTOR: ${{ github.event.sender.login }}
+          TEAM_ORG: ${{ inputs.team-org }}
+          TEAM_SLUG: ${{ inputs.team-slug }}
+          LABEL_NAME: ${{ inputs.approval-label }}
+          LABEL_ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+
+          if ! membership=$(gh api \
+            "orgs/${TEAM_ORG}/teams/${TEAM_SLUG}/memberships/${ACTOR}" \
+            --jq '.state' 2>/dev/null); then
+            echo "::error::Could not verify whether ${ACTOR} belongs to ${TEAM_ORG}/${TEAM_SLUG}. Check that the team-membership-token has read:org access and that the actor is a team member."
+            exit 1
+          fi
+
+          if [[ "${membership}" != "active" ]]; then
+            echo "::error::${ACTOR} is not an active member of ${TEAM_ORG}/${TEAM_SLUG}; they cannot ${LABEL_ACTION} the '${LABEL_NAME}' label."
+            exit 1
+          fi
+
+          echo "::notice::${ACTOR} is an active member of ${TEAM_ORG}/${TEAM_SLUG}; the '${LABEL_NAME}' label change is authorized."
