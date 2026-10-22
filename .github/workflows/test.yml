@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   prek:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       name: ack # ANSIBUDDY_BOT_PAT, ANSIBUDDY_GPG_PRIVATE_KEY, ANSIBUDDY_GPG_PASSPHRASE
     permissions:
@@ -47,11 +47,11 @@ jobs:
 
       # needed by our prek system hooks like toml
       - name: Install uv (cache)
-        uses: astral-sh/setup-uv@v10.1.0
+        uses: astral-sh/setup-uv@v10.3.0
 
       # needed by our prek systems hooks like biome
       - name: Install node (cache)
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "24"
 
@@ -62,7 +62,7 @@ jobs:
           [ ! -f package-lock.json ] || npm ci
           [ ! -f pnpm-lock.yaml ] || pnpm install --frozen-lockfile
 
-      - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+      - uses: j178/prek-action@af4d4fcb6922b8e6f65c0426947125fcc38794ce # v3.0.2
         id: prek
         with:
           extra-args: --all-files
@@ -126,7 +126,7 @@ jobs:
 
   matrix:
     needs: prek
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Self test 'matrix' action
@@ -168,7 +168,7 @@ jobs:
       # https://github.com/marketplace/actions/setup-wsl
       - name: Activate WSL
         if: contains(matrix.name, 'wsl') && (matrix.runs-on || '') != 'self-hosted'
-        uses: Vampire/setup-wsl@v7.0.0
+        uses: Vampire/setup-wsl@v7.2.0
         with:
           distribution: Ubuntu-24.04
           set-as-default: "true"
@@ -195,7 +195,7 @@ jobs:
 
       - name: Install the latest version of uv
         if: ${{ runner.os != 'Windows' }}
-        uses: astral-sh/setup-uv@v10.1.0
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: "latest"
           ignore-nothing-to-cache: true
@@ -426,7 +426,7 @@ jobs:
       - tox
       - matrix
       - upload-artifact
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Remove test artifacts
         if: always()
