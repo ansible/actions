@@ -1,0 +1,8 @@
+title: "Fix authentication bypass vulnerability and remove unsafe endpoint"
+type:
+  - security
+  - removed
+breaking: true
+summary: "Addressed CVE-2025-12345: authentication bypass in /api/v2/debug. Endpoint has been completely removed."
+endpoint: "/api/v2/debug"
+migration: "The debug endpoint is no longer available. Use standard logging mechanisms instead."

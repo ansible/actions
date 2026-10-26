@@ -1,0 +1,6 @@
+title: "Remove deprecated /api/v1/legacy endpoint"
+type: removed
+breaking: true
+summary: "The /api/v1/legacy endpoint has been removed after its 6-month deprecation period."
+endpoint: "/api/v1/legacy"
+migration: "Migrate to /api/v2/resource. See migration guide at docs.example.com/v1-to-v2."

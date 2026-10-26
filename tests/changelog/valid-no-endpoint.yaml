@@ -1,0 +1,4 @@
+title: "Change default timeout for all async operations"
+type: changed
+breaking: false
+summary: "Default timeout for async operations increased from 30s to 60s to reduce timeout errors."

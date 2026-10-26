@@ -1,0 +1,5 @@
+title: "Update authentication mechanism"
+type: changed
+breaking: true
+summary: "TODO: fill this in"
+migration: "Update your authentication flow."

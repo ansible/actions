@@ -1,0 +1,8 @@
+title: "Add new credential type support"
+type: added
+breaking: false
+summary: "Added support for AWS IAM role credentials in credential management."
+endpoint: "/api/v2/credentials/"
+custom_field: "some value"
+jira_ticket: "AAP-12345"
+reviewer: "alice@example.com"

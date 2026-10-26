@@ -1,0 +1,6 @@
+title: "Require authentication for all API endpoints"
+type: changed
+breaking: true
+summary: "All API endpoints now require authentication. Anonymous access has been removed."
+endpoint: "*"
+migration: "Configure authentication credentials for all API clients. See auth setup guide."
