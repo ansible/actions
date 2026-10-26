@@ -13,7 +13,11 @@ WORKFLOW = (
 
 
 def _workflow_script() -> str:
-    """Return the workflow's inline shell script so tests exercise the real code."""
+    """Return the workflow's inline shell script so tests exercise the real code.
+
+    Returns:
+        The workflow's inline shell script.
+    """
     lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
     run_line = next(
         index for index, line in enumerate(lines) if line == "        run: |"
@@ -31,7 +35,15 @@ def _workflow_script() -> str:
 def _run_workflow_script(
     tmp_path: Path, *, api_error: bool
 ) -> subprocess.CompletedProcess[str]:
-    """Run the inline check with a fake gh command and controlled API result."""
+    """Run the inline check with a fake gh command and controlled API result.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+        api_error: Whether the mocked API call should fail.
+
+    Returns:
+        The completed shell process.
+    """
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     gh = bin_dir / "gh"
@@ -68,7 +80,11 @@ def _run_workflow_script(
 
 
 def test_non_member_is_rejected_and_api_error_is_visible(tmp_path: Path) -> None:
-    """A non-member API response fails authorization and retains gh diagnostics."""
+    """A non-member API response fails authorization and retains gh diagnostics.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
     result = _run_workflow_script(tmp_path, api_error=True)
 
     assert result.returncode != 0
@@ -77,7 +93,11 @@ def test_non_member_is_rejected_and_api_error_is_visible(tmp_path: Path) -> None
 
 
 def test_active_team_member_is_authorized(tmp_path: Path) -> None:
-    """An active team member can change the approval label."""
+    """An active team member can change the approval label.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
     result = _run_workflow_script(tmp_path, api_error=False)
 
     assert result.returncode == 0
