@@ -2,7 +2,8 @@
 
 `approval-label-authorization.yml` is a reusable workflow that verifies the
 person who applied or removed `breaking-change-approved` belongs to the
-`ansible-staff-eng-leads` GitHub team. It checks the actor from the
+`ansible-staff-eng-leads` GitHub team in the organization that calls the
+reusable workflow. It checks the actor from the
 `pull_request_target` label event and fails when membership cannot be verified
 or is not active.
 
@@ -42,8 +43,13 @@ person who changed the label.
 
 `GITHUB_TOKEN` cannot read organization team membership. Configure the
 `TEAM_MEMBERSHIP_TOKEN` repository or organization secret with a token granted
-organization-member read access in the `ansible` organization. It must be able
-to read membership for `ansible-staff-eng-leads`.
+organization-member read access in the calling repository's organization. The
+workflow derives the organization from the repository that calls it, so there
+is no organization input to configure. The token must be able to read
+membership for `ansible-staff-eng-leads` in that organization.
+
+The token is required. If the caller is a fork without this secret, the
+authorization check fails because it cannot verify team membership.
 
 Require the `approval-label-authorization` check in the repository's target
 branch rules. This makes an unauthorized label change fail the merge gate.

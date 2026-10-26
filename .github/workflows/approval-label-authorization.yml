@@ -9,11 +9,6 @@ on:
         required: false
         type: string
         default: breaking-change-approved
-      team-org:
-        description: GitHub organization that owns the approval team.
-        required: false
-        type: string
-        default: ansible
       team-slug:
         description: GitHub slug of the team allowed to apply or remove the label.
         required: false
@@ -42,7 +37,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.team-membership-token }}
           ACTOR: ${{ github.event.sender.login }}
-          TEAM_ORG: ${{ inputs.team-org }}
+          TEAM_ORG: ${{ github.repository_owner }}
           TEAM_SLUG: ${{ inputs.team-slug }}
           LABEL_NAME: ${{ inputs.approval-label }}
           LABEL_ACTION: ${{ github.event.action }}
