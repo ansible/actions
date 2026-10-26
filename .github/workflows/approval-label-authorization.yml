@@ -51,7 +51,7 @@ jobs:
 
           if ! membership=$(gh api \
             "orgs/${TEAM_ORG}/teams/${TEAM_SLUG}/memberships/${ACTOR}" \
-            --jq '.state' 2>/dev/null); then
+            --jq '.state'); then
             echo "::error::Could not verify whether ${ACTOR} belongs to ${TEAM_ORG}/${TEAM_SLUG}. Check that the team-membership-token has read:org access and that the actor is a team member."
             exit 1
           fi
