@@ -18,13 +18,24 @@ SCHEMA_PATH = REPO_ROOT / "config" / "changelog-fragment-schema.json"
 
 
 def _load_schema() -> dict[str, Any]:
-    """Load the changelog fragment JSON Schema."""
-    return json.loads(SCHEMA_PATH.read_text())  # type: ignore[no-untyped-call]
+    """Load the changelog fragment JSON Schema.
+
+    Returns:
+        The parsed JSON Schema as a dictionary.
+    """
+    return json.loads(SCHEMA_PATH.read_text())  # type: ignore[no-any-return]
 
 
 def _load_fragment(name: str) -> dict[str, Any]:
-    """Load a changelog fragment YAML fixture."""
-    return yaml.safe_load((TESTS_DIR / name).read_text())  # type: ignore[no-untyped-call]
+    """Load a changelog fragment YAML fixture.
+
+    Args:
+        name: The fixture filename (e.g., "valid-basic.yaml").
+
+    Returns:
+        The parsed YAML fragment as a dictionary.
+    """
+    return yaml.safe_load((TESTS_DIR / name).read_text())  # type: ignore[no-any-return,no-untyped-call]
 
 
 def test_schema_is_valid_json() -> None:
@@ -60,10 +71,14 @@ def test_schema_allows_additional_properties() -> None:
     ],
 )
 def test_valid_fragment_passes(fixture: str) -> None:
-    """Valid changelog fragments must pass schema validation."""
+    """Valid changelog fragments must pass schema validation.
+
+    Args:
+        fixture: The name of the YAML fixture file to validate.
+    """
     schema = _load_schema()
     fragment = _load_fragment(fixture)
-    jsonschema.validate(fragment, schema)  # type: ignore[attr-defined]
+    jsonschema.validate(fragment, schema)  # type: ignore[no-untyped-call]
 
 
 @pytest.mark.skipif(jsonschema is None, reason="jsonschema not installed")
@@ -80,8 +95,12 @@ def test_valid_fragment_passes(fixture: str) -> None:
     ],
 )
 def test_invalid_fragment_fails(fixture: str) -> None:
-    """Invalid changelog fragments must fail schema validation."""
+    """Invalid changelog fragments must fail schema validation.
+
+    Args:
+        fixture: The name of the YAML fixture file to validate.
+    """
     schema = _load_schema()
     fragment = _load_fragment(fixture)
-    with pytest.raises(jsonschema.ValidationError):  # type: ignore[attr-defined]
-        jsonschema.validate(fragment, schema)  # type: ignore[attr-defined]
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(fragment, schema)  # type: ignore[no-untyped-call]
