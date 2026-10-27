@@ -22,7 +22,7 @@ on:
 permissions:
   contents: read
   issues: read
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   approval-label-authorization:
@@ -36,23 +36,43 @@ jobs:
       - name: Verify the label actor belongs to the approval team
         env:
           GH_TOKEN: ${{ secrets.team-membership-token }}
+          LABEL_TOKEN: ${{ github.token }}
           ACTOR: ${{ github.event.sender.login }}
           TEAM_ORG: ${{ github.repository_owner }}
           TEAM_SLUG: ${{ inputs.team-slug }}
           LABEL_NAME: ${{ inputs.approval-label }}
           LABEL_ACTION: ${{ github.event.action }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+
+          remove_label_if_added_by_unauthorized_actor() {
+            if [[ "${LABEL_ACTION}" != "labeled" ]]; then
+              return
+            fi
+
+            if GH_TOKEN="${LABEL_TOKEN}" gh api \
+              --method DELETE \
+              "repos/${REPOSITORY}/issues/${PR_NUMBER}/labels/${LABEL_NAME}" \
+              >/dev/null; then
+              echo "::notice::Removed '${LABEL_NAME}' because ${ACTOR}'s team membership could not be authorized."
+            else
+              echo "::error::Could not remove '${LABEL_NAME}'. Check that the workflow token has pull-requests: write permission."
+            fi
+          }
 
           if ! membership=$(gh api \
             "orgs/${TEAM_ORG}/teams/${TEAM_SLUG}/memberships/${ACTOR}" \
             --jq '.state'); then
             echo "::error::Could not verify whether ${ACTOR} belongs to ${TEAM_ORG}/${TEAM_SLUG}. Check that the team-membership-token has read:org access and that the actor is a team member."
+            remove_label_if_added_by_unauthorized_actor
             exit 1
           fi
 
           if [[ "${membership}" != "active" ]]; then
             echo "::error::${ACTOR} is not an active member of ${TEAM_ORG}/${TEAM_SLUG}; they cannot ${LABEL_ACTION} the '${LABEL_NAME}' label."
+            remove_label_if_added_by_unauthorized_actor
             exit 1
           fi
 
