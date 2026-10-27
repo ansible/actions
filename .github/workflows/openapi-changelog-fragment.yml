@@ -282,6 +282,13 @@ jobs:
               else:
                 errors.append("endpoint must be '*', a string, or an array")
 
+            # Validate migration if present
+            if 'migration' in data:
+              if not isinstance(data['migration'], str) or len(data['migration']) == 0:
+                errors.append("migration must be a non-empty string")
+              elif re.search(r'TODO', data['migration'], re.IGNORECASE):
+                errors.append("migration contains TODO placeholder — must be filled in")
+
             # Conditional validation: breaking requires migration
             if data.get('breaking') is True:
               if 'migration' not in data or not data['migration']:
