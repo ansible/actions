@@ -69,7 +69,10 @@
     "migration": {
       "type": "string",
       "minLength": 1,
-      "description": "Migration guidance (required for breaking changes or deprecations)"
+      "not": {
+        "pattern": "(?i)TODO"
+      },
+      "description": "Migration guidance (required for breaking changes or deprecations, TODO placeholders not allowed)"
     }
   },
   "allOf": [

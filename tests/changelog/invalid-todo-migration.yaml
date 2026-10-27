@@ -1,0 +1,6 @@
+title: "Add rate limiting to API gateway"
+type: changed
+breaking: true
+summary: "Rate limiting is now enforced on all endpoints."
+endpoint: "/api/v2/gateway/"
+migration: "TODO: describe how to handle rate limits"

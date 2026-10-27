@@ -154,6 +154,12 @@ jobs:
           import re
           from pathlib import Path
 
+          try:
+            import jsonschema
+          except ImportError:
+            print("ERROR: jsonschema not installed")
+            sys.exit(1)
+
           schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "title": "API Changelog Fragment Schema",
@@ -177,7 +183,8 @@ jobs:
                       "type": "string",
                       "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"]
                     },
-                    "minItems": 1
+                    "minItems": 1,
+                    "uniqueItems": True
                   }
                 ]
               },
@@ -186,7 +193,10 @@ jobs:
               },
               "summary": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "not": {
+                  "pattern": "(?i)TODO"
+                }
               },
               "endpoint": {
                 "oneOf": [
@@ -201,15 +211,60 @@ jobs:
                       "type": "string",
                       "pattern": "^/[^*]+$"
                     },
-                    "minItems": 1
+                    "minItems": 1,
+                    "uniqueItems": True
                   }
                 ]
               },
               "migration": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "not": {
+                  "pattern": "(?i)TODO"
+                }
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "breaking": {
+                      "const": True
+                    }
+                  }
+                },
+                "then": {
+                  "required": ["migration"]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "deprecated"
+                    }
+                  }
+                },
+                "then": {
+                  "required": ["migration"]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "type": "array",
+                      "contains": {
+                        "const": "deprecated"
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "required": ["migration"]
+                }
+              }
+            ]
           }
 
           def validate_fragment(filepath):
@@ -224,84 +279,19 @@ jobs:
             if not isinstance(data, dict):
               return ["Fragment must be a YAML object/dict"]
 
-            # Check required fields
-            for field in schema['required']:
-              if field not in data:
-                errors.append(f"Missing required field: {field}")
+            # Primary validation via JSON Schema
+            try:
+              jsonschema.validate(data, schema)
+            except jsonschema.ValidationError as e:
+              errors.append(e.message)
+              return errors
 
-            # Validate title
-            if 'title' in data:
-              if not isinstance(data['title'], str) or len(data['title']) == 0:
-                errors.append("title must be a non-empty string")
+            # Supplemental TODO checks (schema's not.pattern may use non-portable regex)
+            if re.search(r'TODO', data.get('summary', ''), re.IGNORECASE):
+              errors.append("summary contains TODO placeholder — must be filled in")
 
-            # Validate type
-            if 'type' in data:
-              valid_types = ["added", "changed", "deprecated", "removed", "fixed", "security"]
-              if isinstance(data['type'], str):
-                if data['type'] not in valid_types:
-                  errors.append(f"type '{data['type']}' is not valid. Must be one of: {', '.join(valid_types)}")
-              elif isinstance(data['type'], list):
-                if len(data['type']) == 0:
-                  errors.append("type array must have at least one item")
-                for t in data['type']:
-                  if t not in valid_types:
-                    errors.append(f"type '{t}' in array is not valid")
-                if len(data['type']) != len(set(data['type'])):
-                  errors.append("type array must have unique items")
-              else:
-                errors.append("type must be a string or array")
-
-            # Validate breaking
-            if 'breaking' in data:
-              if not isinstance(data['breaking'], bool):
-                errors.append("breaking must be a boolean (true/false)")
-
-            # Validate summary
-            if 'summary' in data:
-              if not isinstance(data['summary'], str) or len(data['summary']) == 0:
-                errors.append("summary must be a non-empty string")
-              elif re.search(r'TODO', data['summary'], re.IGNORECASE):
-                errors.append("summary contains TODO placeholder — must be filled in")
-
-            # Validate endpoint if present
-            if 'endpoint' in data:
-              endpoint = data['endpoint']
-              if endpoint == "*":
-                pass  # Valid wildcard
-              elif isinstance(endpoint, str):
-                if not endpoint.startswith('/') or '*' in endpoint:
-                  errors.append("endpoint must start with / and not contain *")
-              elif isinstance(endpoint, list):
-                if len(endpoint) == 0:
-                  errors.append("endpoint array must have at least one item")
-                for ep in endpoint:
-                  if not isinstance(ep, str) or not ep.startswith('/') or '*' in ep:
-                    errors.append(f"endpoint '{ep}' must start with / and not contain *")
-                if len(endpoint) != len(set(endpoint)):
-                  errors.append("endpoint array must have unique items")
-              else:
-                errors.append("endpoint must be '*', a string, or an array")
-
-            # Validate migration if present
-            if 'migration' in data:
-              if not isinstance(data['migration'], str) or len(data['migration']) == 0:
-                errors.append("migration must be a non-empty string")
-              elif re.search(r'TODO', data['migration'], re.IGNORECASE):
-                errors.append("migration contains TODO placeholder — must be filled in")
-
-            # Conditional validation: breaking requires migration
-            if data.get('breaking') is True:
-              if 'migration' not in data or not data['migration']:
-                errors.append("migration is required when breaking is true")
-
-            # Conditional validation: deprecated type requires migration
-            type_val = data.get('type')
-            if type_val == 'deprecated':
-              if 'migration' not in data or not data['migration']:
-                errors.append("migration is required when type is deprecated")
-            elif isinstance(type_val, list) and 'deprecated' in type_val:
-              if 'migration' not in data or not data['migration']:
-                errors.append("migration is required when type array contains deprecated")
+            if 'migration' in data and re.search(r'TODO', data['migration'], re.IGNORECASE):
+              errors.append("migration contains TODO placeholder — must be filled in")
 
             return errors
 
@@ -323,7 +313,7 @@ jobs:
           PYEOF
 
           # Install dependencies
-          pip install --quiet pyyaml
+          pip install --quiet pyyaml jsonschema
 
           # Run validation
           fragment_paths_array=()

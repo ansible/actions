@@ -88,6 +88,7 @@ def test_valid_fragment_passes(fixture: str) -> None:
         "invalid-missing-title.yaml",
         "invalid-bad-type.yaml",
         "invalid-todo-summary.yaml",
+        "invalid-todo-migration.yaml",
         "invalid-breaking-no-migration.yaml",
         "invalid-deprecated-no-migration.yaml",
         "invalid-deprecated-list-no-migration.yaml",
