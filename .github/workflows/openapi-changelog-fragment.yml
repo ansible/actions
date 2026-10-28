@@ -39,8 +39,8 @@ jobs:
     name: "Changelog fragment enforcement"
     runs-on: ubuntu-24.04
     outputs:
-      has-spec-changes: ${{ steps.detect-spec-changes.outputs.has-spec-changes }}
-      has-fragment: ${{ steps.detect-fragments.outputs.has-fragment }}
+      has-spec-changes: ${{ steps.detect-changes.outputs.has-spec-changes }}
+      has-fragment: ${{ steps.detect-changes.outputs.has-fragment }}
       validation-passed: ${{ steps.validate-fragments.outputs.validation-passed }}
     steps:
       - name: Checkout PR branch
@@ -49,109 +49,95 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Detect spec changes
-        id: detect-spec-changes
+      - name: Detect spec and fragment changes
+        id: detect-changes
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         env:
           SPEC_PATHS: ${{ inputs.spec-paths }}
-        with:
-          script: |
-            const fs = require('fs');
-            const specPaths = process.env.SPEC_PATHS;
-
-            if (!context.payload.pull_request) {
-              core.warning('Not a pull request context — skipping spec change detection');
-              core.setOutput('has-spec-changes', 'false');
-              core.setOutput('changed-specs', '[]');
-              return;
-            }
-
-            const pr = context.payload.pull_request;
-            const files = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.number,
-              per_page: 100
-            });
-
-            // Simple glob matching (supports openapi/*.yaml pattern)
-            const globMatch = (pattern, filename) => {
-              const regexPattern = pattern
-                .replace(/\./g, '\\.')
-                .replace(/\*/g, '[^/]*')
-                .replace(/\?/g, '.');
-              const regex = new RegExp(`^${regexPattern}$`);
-              return regex.test(filename);
-            };
-
-            const changedSpecs = files.data
-              .filter(f => ['added', 'modified'].includes(f.status))
-              .filter(f => globMatch(specPaths, f.filename))
-              .map(f => f.filename);
-
-            const hasChanges = changedSpecs.length > 0;
-            core.setOutput('has-spec-changes', String(hasChanges));
-            core.setOutput('changed-specs', JSON.stringify(changedSpecs));
-
-            if (hasChanges) {
-              core.notice(`Detected OpenAPI spec changes: ${changedSpecs.join(', ')}`);
-            } else {
-              core.notice('No OpenAPI spec changes detected');
-            }
-
-      - name: Detect fragment files
-        id: detect-fragments
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        env:
           FRAGMENT_DIR: ${{ inputs.fragment-dir }}
         with:
           script: |
-            const fs = require('fs');
+            const specPaths = process.env.SPEC_PATHS;
             const fragmentDir = process.env.FRAGMENT_DIR;
 
             if (!context.payload.pull_request) {
+              core.warning('Not a pull request context — skipping change detection');
+              core.setOutput('has-spec-changes', 'false');
+              core.setOutput('changed-specs', '[]');
               core.setOutput('has-fragment', 'false');
               core.setOutput('fragment-paths', '');
               return;
             }
 
             const pr = context.payload.pull_request;
-            const files = await github.rest.pulls.listFiles({
+            const files = await github.paginate(github.rest.pulls.listFiles, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: pr.number,
               per_page: 100
             });
 
-            const fragmentFiles = files.data
-              .filter(f => ['added', 'modified'].includes(f.status))
+            const globMatch = (pattern, filename) => {
+              const regexPattern = pattern
+                .split('*')
+                .map(s => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+                .join('[^/]*');
+              return new RegExp(`^${regexPattern}$`).test(filename);
+            };
+
+            const addedOrModified = files.filter(f => ['added', 'modified'].includes(f.status));
+
+            const changedSpecs = addedOrModified
+              .filter(f => globMatch(specPaths, f.filename))
+              .map(f => f.filename);
+
+            const fragmentFiles = addedOrModified
               .filter(f => f.filename.startsWith(fragmentDir + '/'))
               .filter(f => f.filename.endsWith('.yaml') || f.filename.endsWith('.yml'))
               .filter(f => !f.filename.endsWith('.gitkeep'))
               .map(f => f.filename);
 
+            const hasSpecChanges = changedSpecs.length > 0;
             const hasFragment = fragmentFiles.length > 0;
+
+            core.setOutput('has-spec-changes', String(hasSpecChanges));
+            core.setOutput('changed-specs', JSON.stringify(changedSpecs));
             core.setOutput('has-fragment', String(hasFragment));
             core.setOutput('fragment-paths', fragmentFiles.join('\n'));
+
+            if (hasSpecChanges) {
+              core.notice(`Detected OpenAPI spec changes: ${changedSpecs.join(', ')}`);
+            } else {
+              core.notice('No OpenAPI spec changes detected');
+            }
 
             if (hasFragment) {
               core.notice(`Found ${fragmentFiles.length} changelog fragment(s): ${fragmentFiles.join(', ')}`);
             }
 
+      - name: Checkout changelog schema
+        if: steps.detect-changes.outputs.has-fragment == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ansible/actions
+          ref: ${{ github.job_workflow_sha }}
+          path: .ansible-actions
+          sparse-checkout: config/changelog-fragment-schema.json
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
       - name: Validate fragments against schema
         id: validate-fragments
-        if: steps.detect-fragments.outputs.has-fragment == 'true'
+        if: steps.detect-changes.outputs.has-fragment == 'true'
         env:
-          FRAGMENT_PATHS: ${{ steps.detect-fragments.outputs.fragment-paths }}
+          FRAGMENT_PATHS: ${{ steps.detect-changes.outputs.fragment-paths }}
         run: |
           set -e
 
-          # Inline schema as Python dict for validation
           cat > /tmp/validate_fragments.py << 'PYEOF'
           import sys
           import json
           import yaml
-          import re
           from pathlib import Path
 
           try:
@@ -160,114 +146,7 @@ jobs:
             print("ERROR: jsonschema not installed")
             sys.exit(1)
 
-          schema = {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "title": "API Changelog Fragment Schema",
-            "type": "object",
-            "required": ["title", "type", "breaking", "summary"],
-            "additionalProperties": True,
-            "properties": {
-              "title": {
-                "type": "string",
-                "minLength": 1
-              },
-              "type": {
-                "oneOf": [
-                  {
-                    "type": "string",
-                    "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"]
-                  },
-                  {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"]
-                    },
-                    "minItems": 1,
-                    "uniqueItems": True
-                  }
-                ]
-              },
-              "breaking": {
-                "type": "boolean"
-              },
-              "summary": {
-                "type": "string",
-                "minLength": 1,
-                "not": {
-                  "pattern": "(?i)TODO"
-                }
-              },
-              "endpoint": {
-                "oneOf": [
-                  {"const": "*"},
-                  {
-                    "type": "string",
-                    "pattern": "^/[^*]+$"
-                  },
-                  {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "pattern": "^/[^*]+$"
-                    },
-                    "minItems": 1,
-                    "uniqueItems": True
-                  }
-                ]
-              },
-              "migration": {
-                "type": "string",
-                "minLength": 1,
-                "not": {
-                  "pattern": "(?i)TODO"
-                }
-              }
-            },
-            "allOf": [
-              {
-                "if": {
-                  "properties": {
-                    "breaking": {
-                      "const": True
-                    }
-                  }
-                },
-                "then": {
-                  "required": ["migration"]
-                }
-              },
-              {
-                "if": {
-                  "properties": {
-                    "type": {
-                      "const": "deprecated"
-                    }
-                  }
-                },
-                "then": {
-                  "required": ["migration"]
-                }
-              },
-              {
-                "if": {
-                  "properties": {
-                    "type": {
-                      "type": "array",
-                      "contains": {
-                        "const": "deprecated"
-                      }
-                    }
-                  }
-                },
-                "then": {
-                  "required": ["migration"]
-                }
-              }
-            ]
-          }
-
-          def validate_fragment(filepath):
+          def validate_fragment(filepath, schema):
             errors = []
 
             try:
@@ -279,28 +158,22 @@ jobs:
             if not isinstance(data, dict):
               return ["Fragment must be a YAML object/dict"]
 
-            # Primary validation via JSON Schema
             try:
               jsonschema.validate(data, schema)
             except jsonschema.ValidationError as e:
               errors.append(e.message)
-              return errors
-
-            # Supplemental TODO checks (schema's not.pattern may use non-portable regex)
-            if re.search(r'TODO', data.get('summary', ''), re.IGNORECASE):
-              errors.append("summary contains TODO placeholder — must be filled in")
-
-            if 'migration' in data and re.search(r'TODO', data['migration'], re.IGNORECASE):
-              errors.append("migration contains TODO placeholder — must be filled in")
 
             return errors
 
           if __name__ == '__main__':
-            fragment_paths = sys.argv[1:]
+            schema_path = sys.argv[1]
+            fragment_paths = sys.argv[2:]
+
+            schema = json.loads(Path(schema_path).read_text())
             all_errors = {}
 
             for path in fragment_paths:
-              errors = validate_fragment(path)
+              errors = validate_fragment(path, schema)
               if errors:
                 all_errors[path] = errors
 
@@ -312,16 +185,17 @@ jobs:
               sys.exit(0)
           PYEOF
 
-          # Install dependencies
           pip install --quiet pyyaml jsonschema
 
-          # Run validation
           fragment_paths_array=()
           while IFS= read -r line; do
             [[ -n "$line" ]] && fragment_paths_array+=("$line")
           done <<< "$FRAGMENT_PATHS"
 
-          if python3 /tmp/validate_fragments.py "${fragment_paths_array[@]}" > /tmp/validation-errors.json 2>&1; then
+          if python3 /tmp/validate_fragments.py \
+            .ansible-actions/config/changelog-fragment-schema.json \
+            "${fragment_paths_array[@]}" \
+            > /tmp/validation-errors.json 2>/tmp/validation-stderr.log; then
             echo "validation-passed=true" >> "$GITHUB_OUTPUT"
             echo "::notice::All changelog fragments are valid"
           else
@@ -332,8 +206,8 @@ jobs:
 
       - name: Install oasdiff
         if: >-
-          steps.detect-spec-changes.outputs.has-spec-changes == 'true'
-          && steps.detect-fragments.outputs.has-fragment == 'false'
+          steps.detect-changes.outputs.has-spec-changes == 'true'
+          && steps.detect-changes.outputs.has-fragment == 'false'
         env:
           OASDIFF_VERSION: ${{ inputs.oasdiff-version }}
           OASDIFF_SHA256: "9352233c1234bf5baf4d983078f7afff7bab4941abc253a14914f13ea31a3bf4"
@@ -356,10 +230,10 @@ jobs:
       - name: Generate skeleton fragment
         id: generate-skeleton
         if: >-
-          steps.detect-spec-changes.outputs.has-spec-changes == 'true'
-          && steps.detect-fragments.outputs.has-fragment == 'false'
+          steps.detect-changes.outputs.has-spec-changes == 'true'
+          && steps.detect-changes.outputs.has-fragment == 'false'
         env:
-          CHANGED_SPECS: ${{ steps.detect-spec-changes.outputs.changed-specs }}
+          CHANGED_SPECS: ${{ steps.detect-changes.outputs.changed-specs }}
           BASE_REF: ${{ github.event.pull_request.base.ref || github.base_ref }}
           FRAGMENT_DIR: ${{ inputs.fragment-dir }}
         run: |
@@ -445,12 +319,12 @@ jobs:
         if: always()
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         env:
-          HAS_SPEC_CHANGES: ${{ steps.detect-spec-changes.outputs.has-spec-changes }}
-          HAS_FRAGMENT: ${{ steps.detect-fragments.outputs.has-fragment }}
+          HAS_SPEC_CHANGES: ${{ steps.detect-changes.outputs.has-spec-changes }}
+          HAS_FRAGMENT: ${{ steps.detect-changes.outputs.has-fragment }}
           VALIDATION_PASSED: ${{ steps.validate-fragments.outputs.validation-passed }}
-          FRAGMENT_PATHS: ${{ steps.detect-fragments.outputs.fragment-paths }}
+          FRAGMENT_PATHS: ${{ steps.detect-changes.outputs.fragment-paths }}
           SKELETON_GENERATED: ${{ steps.generate-skeleton.outputs.skeleton-generated }}
-          CHANGED_SPECS: ${{ steps.detect-spec-changes.outputs.changed-specs }}
+          CHANGED_SPECS: ${{ steps.detect-changes.outputs.changed-specs }}
         with:
           script: |
             const fs = require('fs');
@@ -496,7 +370,7 @@ jobs:
 
       - name: Check for api-changelog label
         id: check-label
-        if: steps.detect-spec-changes.outputs.has-spec-changes == 'true'
+        if: steps.detect-changes.outputs.has-spec-changes == 'true'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
@@ -522,8 +396,8 @@ jobs:
         if: always()
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         env:
-          HAS_SPEC_CHANGES: ${{ steps.detect-spec-changes.outputs.has-spec-changes }}
-          HAS_FRAGMENT: ${{ steps.detect-fragments.outputs.has-fragment }}
+          HAS_SPEC_CHANGES: ${{ steps.detect-changes.outputs.has-spec-changes }}
+          HAS_FRAGMENT: ${{ steps.detect-changes.outputs.has-fragment }}
           VALIDATION_PASSED: ${{ steps.validate-fragments.outputs.validation-passed }}
           SKELETON_GENERATED: ${{ steps.generate-skeleton.outputs.skeleton-generated }}
         with:

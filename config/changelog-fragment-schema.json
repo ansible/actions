@@ -38,7 +38,7 @@
       "type": "string",
       "minLength": 1,
       "not": {
-        "pattern": "(?i)TODO"
+        "pattern": "[Tt][Oo][Dd][Oo]"
       },
       "description": "Detailed description of the change (TODO placeholders not allowed)"
     },
@@ -70,7 +70,7 @@
       "type": "string",
       "minLength": 1,
       "not": {
-        "pattern": "(?i)TODO"
+        "pattern": "[Tt][Oo][Dd][Oo]"
       },
       "description": "Migration guidance (required for breaking changes or deprecations, TODO placeholders not allowed)"
     }
@@ -78,6 +78,7 @@
   "allOf": [
     {
       "if": {
+        "required": ["breaking"],
         "properties": {
           "breaking": {
             "const": true
@@ -91,6 +92,7 @@
     },
     {
       "if": {
+        "required": ["type"],
         "properties": {
           "type": {
             "const": "deprecated"
@@ -104,6 +106,7 @@
     },
     {
       "if": {
+        "required": ["type"],
         "properties": {
           "type": {
             "type": "array",
