@@ -103,5 +103,5 @@ def test_invalid_fragment_fails(fixture: str) -> None:
     """
     schema = _load_schema()
     fragment = _load_fragment(fixture)
-    with pytest.raises(jsonschema.ValidationError):  # type: ignore[union-attr]
+    with pytest.raises(jsonschema.ValidationError):  # pyright: ignore[reportOptionalMemberAccess]
         jsonschema.validate(fragment, schema)  # type: ignore[no-untyped-call]
