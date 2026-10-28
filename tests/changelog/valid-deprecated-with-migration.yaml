@@ -1,0 +1,7 @@
+---
+title: "Deprecate filter parameter on /api/v2/jobs"
+type: deprecated
+breaking: false
+summary: "The filter query parameter on /api/v2/jobs is deprecated in favor of the new filters object in request body."
+endpoint: "/api/v2/jobs"
+migration: "Use the filters field in the POST body instead of ?filter=. The query parameter will be removed in v3."

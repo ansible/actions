@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ansible/actions/blob/main/config/changelog-fragment-schema.json",
+  "title": "API Changelog Fragment Schema",
+  "description": "Schema for changelog fragment YAML files (PR #1660, AAP-92950)",
+  "type": "object",
+  "required": ["title", "type", "breaking", "summary"],
+  "additionalProperties": true,
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Brief title for the change"
+    },
+    "type": {
+      "description": "Type of change (single value or array)",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      ]
+    },
+    "breaking": {
+      "type": "boolean",
+      "description": "Whether this is a breaking change"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "[Tt][Oo][Dd][Oo]"
+      },
+      "description": "Detailed description of the change (TODO placeholders not allowed)"
+    },
+    "endpoint": {
+      "description": "Affected endpoint(s): '*' for all, single path, or array of paths",
+      "oneOf": [
+        {
+          "const": "*",
+          "description": "Wildcard: affects all endpoints"
+        },
+        {
+          "type": "string",
+          "pattern": "^/[^*]+$",
+          "description": "Single endpoint path (must start with /, no * allowed)"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^/[^*]+$"
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Array of endpoint paths"
+        }
+      ]
+    },
+    "migration": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "[Tt][Oo][Dd][Oo]"
+      },
+      "description": "Migration guidance (required for breaking changes or deprecations, TODO placeholders not allowed)"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["breaking"],
+        "properties": {
+          "breaking": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": ["migration"],
+        "errorMessage": "migration is required when breaking is true"
+      }
+    },
+    {
+      "if": {
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "const": "deprecated"
+          }
+        }
+      },
+      "then": {
+        "required": ["migration"],
+        "errorMessage": "migration is required when type is deprecated"
+      }
+    },
+    {
+      "if": {
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "array",
+            "contains": {
+              "const": "deprecated"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["migration"],
+        "errorMessage": "migration is required when type array contains deprecated"
+      }
+    }
+  ]
+}

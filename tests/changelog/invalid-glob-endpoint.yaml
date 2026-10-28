@@ -1,0 +1,6 @@
+---
+title: "Update all v2 endpoints"
+type: changed
+breaking: false
+summary: "Added rate limiting to all v2 API endpoints."
+endpoint: "/api/v2/*"

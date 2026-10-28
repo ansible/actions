@@ -1,0 +1,8 @@
+---
+title: "Security fix with deprecation"
+type:
+  - security
+  - deprecated
+breaking: false
+summary: "Fixed security issue and deprecated the vulnerable endpoint pattern."
+endpoint: "/api/v2/unsafe"

@@ -1,0 +1,9 @@
+---
+title: "Fix and update job_template status field behavior"
+type:
+  - fixed
+  - changed
+breaking: true
+summary: "Fixed incorrect status transitions and changed the status field to be required in responses."
+endpoint: "/api/v2/job_templates/{id}/"
+migration: "Clients must now handle the status field in all responses. Previously it was optional."

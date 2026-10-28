@@ -1,1 +1,6 @@
 * @ssbarnea @ansible/devtools
+
+# ANSTRAT-2346 API changelog fragment workflows
+.github/workflows/openapi-changelog-* @ansible/anstrat-2346-pod @ansible/devtools
+config/changelog-* @ansible/anstrat-2346-pod @ansible/devtools
+tests/changelog/ @ansible/anstrat-2346-pod @ansible/devtools

@@ -21,8 +21,10 @@ action = [
 dev = [
   "coverage-enable-subprocess",  # see https://github.com/nedbat/coveragepy/issues/1341#issuecomment-1228942657
   "coverage[toml] >= 6.4.4",
+  "jsonschema >= 4.23.0",
   "pytest-xdist >= 2.1.0",
   "pytest >= 9.0.3",
+  "pyyaml >= 6.0",
 ]
 lint = [
   "actions-toolkit>=0.1.15",
