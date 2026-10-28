@@ -1,3 +1,4 @@
+---
 title: "Require authentication for all API endpoints"
 type: changed
 breaking: true

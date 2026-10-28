@@ -1,3 +1,4 @@
+---
 title: "Fix authentication bypass vulnerability and remove unsafe endpoint"
 type:
   - security

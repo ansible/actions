@@ -1,3 +1,4 @@
+---
 title: "Remove deprecated /api/v1/legacy endpoint"
 type: removed
 breaking: true

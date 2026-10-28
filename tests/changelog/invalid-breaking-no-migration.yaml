@@ -1,3 +1,4 @@
+---
 title: "Remove legacy API endpoints"
 type: removed
 breaking: true

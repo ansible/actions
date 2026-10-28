@@ -1,3 +1,4 @@
+---
 type: fixed
 breaking: false
 summary: "Fixed pagination bug in inventory listing."
