@@ -14,10 +14,14 @@ on:
         required: false
         type: string
         default: ansible-staff-eng-leads
+      app-client-id:
+        description: Client ID of the GitHub App installed in the calling organization.
+        required: false
+        type: string
     secrets:
-      team-membership-token:
-        description: Token with read:org access to verify team membership.
-        required: true
+      app-private-key:
+        description: Private key for the GitHub App installed in the calling organization.
+        required: false
 
 permissions:
   contents: read
@@ -33,9 +37,20 @@ jobs:
       github.event.label.name == inputs.approval-label
     runs-on: ubuntu-24.04
     steps:
+      - name: Create GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        # Let the verification step remove a newly added label if token minting fails.
+        continue-on-error: true
+        with:
+          client-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.app-private-key }}
+          owner: ${{ github.repository_owner }}
+          permission-members: read
+
       - name: Verify the label actor belongs to the approval team
         env:
-          GH_TOKEN: ${{ secrets.team-membership-token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           LABEL_TOKEN: ${{ github.token }}
           ACTOR: ${{ github.event.sender.login }}
           TEAM_ORG: ${{ github.repository_owner }}
@@ -62,10 +77,16 @@ jobs:
             fi
           }
 
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::Could not create a GitHub App installation token. Check that the caller passes the App client ID and private key and that the App is installed in ${TEAM_ORG} with Members read permission."
+            remove_label_if_added_by_unauthorized_actor
+            exit 1
+          fi
+
           if ! membership=$(gh api \
             "orgs/${TEAM_ORG}/teams/${TEAM_SLUG}/memberships/${ACTOR}" \
             --jq '.state'); then
-            echo "::error::Could not verify whether ${ACTOR} belongs to ${TEAM_ORG}/${TEAM_SLUG}. Check that the team-membership-token has read:org access and that the actor is a team member."
+            echo "::error::Could not verify whether ${ACTOR} belongs to ${TEAM_ORG}/${TEAM_SLUG}. Check that the GitHub App is installed in ${TEAM_ORG} with Members read permission and that the actor is a team member."
             remove_label_if_added_by_unauthorized_actor
             exit 1
           fi
