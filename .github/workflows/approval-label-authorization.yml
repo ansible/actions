@@ -1,0 +1,100 @@
+---
+name: approval-label-authorization
+
+on:
+  workflow_call:
+    inputs:
+      approval-label:
+        description: Label whose applier must belong to the approval team.
+        required: false
+        type: string
+        default: breaking-change-approved
+      team-slug:
+        description: GitHub slug of the team allowed to apply or remove the label.
+        required: false
+        type: string
+        default: ansible-staff-eng-leads
+      app-client-id:
+        description: Client ID of the GitHub App installed in the calling organization.
+        required: false
+        type: string
+    secrets:
+      app-private-key:
+        description: Private key for the GitHub App installed in the calling organization.
+        required: false
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: write
+
+jobs:
+  approval-label-authorization:
+    name: approval-label-authorization
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      (github.event.action == 'labeled' || github.event.action == 'unlabeled') &&
+      github.event.label.name == inputs.approval-label
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        # Let the verification step remove a newly added label if token minting fails.
+        continue-on-error: true
+        with:
+          client-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.app-private-key }}
+          owner: ${{ github.repository_owner }}
+          permission-members: read
+
+      - name: Verify the label actor belongs to the approval team
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          LABEL_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.event.sender.login }}
+          TEAM_ORG: ${{ github.repository_owner }}
+          TEAM_SLUG: ${{ inputs.team-slug }}
+          LABEL_NAME: ${{ inputs.approval-label }}
+          LABEL_ACTION: ${{ github.event.action }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          remove_label_if_added_by_unauthorized_actor() {
+            if [[ "${LABEL_ACTION}" != "labeled" ]]; then
+              return
+            fi
+
+            if GH_TOKEN="${LABEL_TOKEN}" gh api \
+              --method DELETE \
+              "repos/${REPOSITORY}/issues/${PR_NUMBER}/labels/${LABEL_NAME}" \
+              >/dev/null; then
+              echo "::notice::Removed '${LABEL_NAME}' because ${ACTOR}'s team membership could not be authorized."
+            else
+              echo "::error::Could not remove '${LABEL_NAME}'. Check that the workflow token has pull-requests: write permission."
+            fi
+          }
+
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::Could not create a GitHub App installation token. Check that the caller passes the App client ID and private key and that the App is installed in ${TEAM_ORG} with Members read permission."
+            remove_label_if_added_by_unauthorized_actor
+            exit 1
+          fi
+
+          if ! membership=$(gh api \
+            "orgs/${TEAM_ORG}/teams/${TEAM_SLUG}/memberships/${ACTOR}" \
+            --jq '.state'); then
+            echo "::error::Could not verify whether ${ACTOR} belongs to ${TEAM_ORG}/${TEAM_SLUG}. Check that the GitHub App is installed in ${TEAM_ORG} with Members read permission and that the actor is a team member."
+            remove_label_if_added_by_unauthorized_actor
+            exit 1
+          fi
+
+          if [[ "${membership}" != "active" ]]; then
+            echo "::error::${ACTOR} is not an active member of ${TEAM_ORG}/${TEAM_SLUG}; they cannot ${LABEL_ACTION} the '${LABEL_NAME}' label."
+            remove_label_if_added_by_unauthorized_actor
+            exit 1
+          fi
+
+          echo "::notice::${ACTOR} is an active member of ${TEAM_ORG}/${TEAM_SLUG}; the '${LABEL_NAME}' label change is authorized."

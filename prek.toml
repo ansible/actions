@@ -81,14 +81,12 @@ name = "node deps"
 language = "node"
 language_version = "24"
 pass_filenames = false
-files = {
-  glob = [
-    "package.json",
-    "package-lock.json",
-    "yarn.lock",
-    "pnpm-lock.yaml",
-  ]
-}
+files = { glob = [
+  "package.json",
+  "package-lock.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+] }
 stages = ["manual"]
 entry = "sh -c 'npx ncu && npm ci'"
 priority = 4
