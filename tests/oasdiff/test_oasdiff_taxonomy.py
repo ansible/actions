@@ -132,12 +132,15 @@ class TestOasdiffDetection:
                 str(BASE_SPEC),
                 str(revised_spec),
                 "--fail-on",
-                "ERR",
+                "WARN",
             ],
             capture_output=True,
             check=False,
         )
-        return result.returncode != 0
+        if result.returncode not in (0, 1):
+            msg = f"oasdiff failed with exit code {result.returncode}"
+            raise RuntimeError(msg)
+        return result.returncode == 1
 
     def test_detects_endpoint_removal(self) -> None:
         """Category 1: removing an endpoint is a breaking change."""
@@ -152,6 +155,11 @@ class TestOasdiffDetection:
     def test_detects_required_field_addition(self) -> None:
         """Category 3: adding a required request field is a breaking change."""
         spec = TESTS_DIR / "breaking-required-field.yaml"
+        assert self._has_breaking_changes(spec)
+
+    def test_detects_optional_field_removal(self) -> None:
+        """Category 2: removing an optional response field is a breaking change."""
+        spec = TESTS_DIR / "breaking-remove-optional-field.yaml"
         assert self._has_breaking_changes(spec)
 
     def test_nonbreaking_passes_cleanly(self) -> None:

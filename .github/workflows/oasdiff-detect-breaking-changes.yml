@@ -104,7 +104,7 @@ jobs:
           set +e
           oasdiff breaking /tmp/base-spec "${SPEC_PATH}" \
             --format json \
-            --fail-on ERR \
+            --fail-on WARN \
             > /tmp/breaking-raw.json 2>/tmp/oasdiff-stderr.log
           OASDIFF_EXIT=$?
           set -e

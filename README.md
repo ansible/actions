@@ -28,6 +28,7 @@ Breaking changes are classified per the
 name: Breaking Change Detection
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - "openapi/**"     # adjust to your spec file paths
       - "schema.json"
