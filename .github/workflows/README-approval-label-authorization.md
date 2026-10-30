@@ -33,9 +33,11 @@ jobs:
     if: github.event.label.name == 'breaking-change-approved'
     uses: ansible/actions/.github/workflows/approval-label-authorization.yml@<FULL_COMMIT_SHA>
     with:
-      app-client-id: ${{ vars.ANSIBLE_AAP_API_CHANGE_APPROVAL_BOT_APP_CLIENT_ID }}
+      app-client-id: >-
+        ${{ vars.ANSIBLE_AAP_API_CHANGE_APPROVAL_BOT_APP_CLIENT_ID }}
     secrets:
-      app-private-key: ${{ secrets.ANSIBLE_AAP_API_CHANGE_APPROVAL_BOT_APP_PRIVATE_KEY }}
+      app-private-key: >-
+        ${{ secrets.ANSIBLE_AAP_API_CHANGE_APPROVAL_BOT_APP_PRIVATE_KEY }}
 ```
 
 The reusable workflow does not check out or run pull request code. Keep the
