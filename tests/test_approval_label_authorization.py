@@ -33,7 +33,13 @@ def _workflow_script() -> str:
 
 
 def _run_workflow_script(
-    tmp_path: Path, *, api_error: bool, membership: str = "active"
+    tmp_path: Path,
+    *,
+    api_error: bool,
+    membership: str = "active",
+    event_name: str = "pull_request_target",
+    event_action: str = "labeled",
+    event_label: str = "breaking-change-approved",
 ) -> subprocess.CompletedProcess[str]:
     """Run the inline check with a fake gh command and controlled API result.
 
@@ -41,6 +47,9 @@ def _run_workflow_script(
         tmp_path: A temporary directory for the fake ``gh`` command.
         api_error: Whether the mocked API call should fail.
         membership: The team membership state returned by the mocked API.
+        event_name: The GitHub event that invoked the reusable workflow.
+        event_action: The event action that invoked the reusable workflow.
+        event_label: The label attached to the triggering event.
 
     Returns:
         The completed shell process.
@@ -81,6 +90,9 @@ def _run_workflow_script(
         "TEAM_SLUG": "ansible-staff-eng-leads",
         "LABEL_NAME": "breaking-change-approved",
         "LABEL_ACTION": "labeled",
+        "EVENT_NAME": event_name,
+        "EVENT_ACTION": event_action,
+        "EVENT_LABEL": event_label,
         "REPOSITORY": "ansible/awx",
         "PR_NUMBER": "42",
         "MOCK_GH_CALLS": str(tmp_path / "gh_calls"),
@@ -135,3 +147,39 @@ def test_pending_team_member_is_rejected_and_label_is_removed(tmp_path: Path) ->
     assert (tmp_path / "gh_calls").read_text(encoding="utf-8").splitlines() == [
         "repos/ansible/awx/issues/42/labels/breaking-change-approved"
     ]
+
+
+def test_wrong_event_type_fails_instead_of_skipping(tmp_path: Path) -> None:
+    """A caller using pull_request fails the security gate instead of skipping it.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
+    result = _run_workflow_script(tmp_path, api_error=False, event_name="pull_request")
+
+    assert result.returncode != 0
+    assert "must be called from a pull_request_target workflow" in result.stdout
+
+
+def test_wrong_event_action_fails_instead_of_skipping(tmp_path: Path) -> None:
+    """A caller using an unsupported action fails the security gate.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
+    result = _run_workflow_script(tmp_path, api_error=False, event_action="opened")
+
+    assert result.returncode != 0
+    assert "must be triggered by a labeled or unlabeled action" in result.stdout
+
+
+def test_label_input_mismatch_fails_instead_of_skipping(tmp_path: Path) -> None:
+    """A caller whose configured label differs from the event label fails.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
+    result = _run_workflow_script(tmp_path, api_error=False, event_label="other-label")
+
+    assert result.returncode != 0
+    assert "does not match the configured approval label" in result.stdout
