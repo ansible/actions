@@ -85,13 +85,17 @@ jobs:
               return new RegExp(`^${regexPattern}$`).test(filename);
             };
 
-            const addedOrModified = files.filter(f => ['added', 'modified'].includes(f.status));
-
-            const changedSpecs = addedOrModified
-              .filter(f => globMatch(specPaths, f.filename))
+            const changedSpecs = files
+              .filter(f => ['added', 'modified', 'removed', 'renamed'].includes(f.status))
+              .filter(f => {
+                const names = [f.filename];
+                if (f.previous_filename) names.push(f.previous_filename);
+                return names.some(n => globMatch(specPaths, n));
+              })
               .map(f => f.filename);
 
-            const fragmentFiles = addedOrModified
+            const fragmentFiles = files
+              .filter(f => ['added', 'modified'].includes(f.status))
               .filter(f => f.filename.startsWith(fragmentDir + '/'))
               .filter(f => f.filename.endsWith('.yaml') || f.filename.endsWith('.yml'))
               .filter(f => !f.filename.endsWith('.gitkeep'))
@@ -120,7 +124,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ansible/actions
-          ref: ${{ github.workflow_sha }}
+          ref: ${{ github.job_workflow_sha }}
           path: .ansible-actions
           sparse-checkout: config/changelog-fragment-schema.json
           sparse-checkout-cone-mode: false
@@ -244,20 +248,35 @@ jobs:
 
           echo "Generating skeleton fragment for: $first_spec"
 
-          # Try to get baseline spec
-          if ! git show "origin/${BASE_REF}:${first_spec}" > /tmp/base-spec 2>/dev/null; then
-            echo "::warning::No baseline spec found on ${BASE_REF} — cannot generate skeleton"
+          has_base=false
+          if git show "origin/${BASE_REF}:${first_spec}" > /tmp/base-spec 2>/dev/null; then
+            has_base=true
+          fi
+
+          has_head=false
+          if [ -f "${first_spec}" ]; then
+            has_head=true
+          fi
+
+          if [ "$has_base" = "false" ] && [ "$has_head" = "false" ]; then
+            echo "::warning::No spec found on ${BASE_REF} or HEAD — cannot generate skeleton"
             echo "skeleton-generated=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Run oasdiff changelog to detect changes
-          set +e
-          oasdiff changelog /tmp/base-spec "${first_spec}" \
-            --format json \
-            > /tmp/oasdiff-changelog.json 2>/tmp/oasdiff-stderr.log
-          OASDIFF_EXIT=$?
-          set -e
+          OASDIFF_EXIT=0
+          if [ "$has_base" = "true" ] && [ "$has_head" = "true" ]; then
+            set +e
+            oasdiff changelog /tmp/base-spec "${first_spec}" \
+              --format json \
+              > /tmp/oasdiff-changelog.json 2>/tmp/oasdiff-stderr.log
+            OASDIFF_EXIT=$?
+            set -e
+          elif [ "$has_base" = "true" ] && [ "$has_head" = "false" ]; then
+            echo '[]' > /tmp/oasdiff-changelog.json
+          else
+            echo '[]' > /tmp/oasdiff-changelog.json
+          fi
 
           if [ "${OASDIFF_EXIT}" -ne 0 ]; then
             echo "::warning::oasdiff changelog failed with exit code ${OASDIFF_EXIT}"
@@ -269,19 +288,21 @@ jobs:
           fi
 
           # Parse oasdiff output to determine change type and breaking status
-          # Default values
           change_type="changed"
           is_breaking="false"
           change_title="OpenAPI specification updated"
 
-          if [ -s /tmp/oasdiff-changelog.json ]; then
-            # Try to detect breaking changes
-            breaking_count=$(jq -r '[.[] | select(.level == "error")] | length' /tmp/oasdiff-changelog.json 2>/dev/null || echo "0")
+          if [ "$has_base" = "true" ] && [ "$has_head" = "false" ]; then
+            change_type="removed"
+            is_breaking="true"
+            change_title="API specification removed"
+          elif [ -s /tmp/oasdiff-changelog.json ]; then
+            # oasdiff v1.18.5 serializes level as int: ERR=3, WARN=2, INFO=1
+            breaking_count=$(jq -r '[.[] | select(.level >= 3)] | length' /tmp/oasdiff-changelog.json 2>/dev/null || echo "0")
             if [ "$breaking_count" -gt 0 ]; then
               is_breaking="true"
             fi
 
-            # Try to infer change type from the diff
             added_paths=$(jq -r '[.[] | select(.id == "api-path-added")] | length' /tmp/oasdiff-changelog.json 2>/dev/null || echo "0")
             removed_paths=$(jq -r '[.[] | select(.id == "api-path-removed-without-deprecation" or .id == "api-removed-without-deprecation")] | length' /tmp/oasdiff-changelog.json 2>/dev/null || echo "0")
 

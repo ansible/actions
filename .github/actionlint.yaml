@@ -1,0 +1,2 @@
+ignore:
+  - 'property "job_workflow_sha" is not defined in object type'
