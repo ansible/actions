@@ -44,6 +44,28 @@ The reusable workflow does not check out or run pull request code. Keep the
 caller on `pull_request_target` so `github.event.sender.login` identifies the
 person who changed the label.
 
+## Required Actions event policy
+
+This caller uses `pull_request_target` because the check needs the GitHub App
+secret to read team membership and a write-capable `GITHUB_TOKEN` to remove an
+unauthorized label. For public repositories, GitHub's default Actions event
+policy blocks `pull_request_target` unless an applicable event policy allows
+it. GitHub plans to enforce this default on December 2, 2026. Before relying
+on this check, an organization or enterprise owner, or a repository admin who
+controls Actions policies, must allow `pull_request_target` for the affected
+repositories and caller workflow. If policy blocks the event, this workflow
+cannot enforce label authorization. See GitHub's documentation on
+[`pull_request_target` policy](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target#default-policy-for-pull_request_target)
+and [workflow execution policies](https://docs.github.com/en/actions/how-tos/administer/control-workflow-execution).
+
+Switching this caller to `pull_request` is not a drop-in replacement. For pull
+requests from forks, GitHub withholds repository and organization secrets and
+makes `GITHUB_TOKEN` read-only. This workflow needs the App key to check team
+membership and a write token to undo an unauthorized label change. If an
+organization cannot allow `pull_request_target`, an alternative would need to
+move this work to a trusted service, such as a GitHub App that handles label
+events and reports a required check.
+
 ## Token and branch protection
 
 The GitHub App must be installed in each calling organization with the
@@ -85,11 +107,17 @@ label is absent.
 
 This workflow checks **who** added or removed the label. It does not inspect the
 pull request's code, bind the approval to a commit, or remove the label when new
-commits are pushed. The label remains until someone removes it.
+commits are pushed. It runs on label changes only. Therefore, a new commit by
+itself does not require re-approval: the label remains until someone removes it,
+and a check that only tests whether the label exists will still see it.
 
-The breaking-change detection workflow is responsible for deciding **whether**
-the approval label applies to the breaking changes in the current pull request.
-If a new commit changes the scope of the approved breaking change, that workflow
-or the approval process must require a fresh approval. The authorization check
-here only verifies that label changes come from an active member of the approval
-team.
+There is currently no automated rule here for deciding whether a new commit
+changes the approved breaking-change scope. The consuming repository's
+breaking-change check or approval process must define and enforce that policy.
+For example, a policy could require re-approval after every new commit, or only
+when a change alters the breaking-change scope. The first can be enforced by
+invalidating the label on each `synchronize` event; the second needs to compare
+the current pull request with the revision that was approved. Until a consumer
+implements one of those rules, this workflow only verifies that label changes
+come from an active member of the approval team; it does not make an existing
+approval expire.
