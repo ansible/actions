@@ -40,6 +40,7 @@ def _run_workflow_script(
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
         api_error: Whether the mocked API call should fail.
+        membership: The team membership state returned by the mocked API.
 
     Returns:
         The completed shell process.
@@ -50,15 +51,15 @@ def _run_workflow_script(
     gh.write_text(
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
-        "if [[ \"${1:-}\" == api && \"${2:-}\" == --method && "
-        "\"${3:-}\" == DELETE ]]; then\n"
-        "  expected_endpoint=\"repos/${REPOSITORY}/issues/${PR_NUMBER}/labels/${LABEL_NAME}\"\n"
-        "  if [[ \"${GH_TOKEN}\" != \"${LABEL_TOKEN}\" || "
-        "\"${4:-}\" != \"${expected_endpoint}\" ]]; then\n"
+        'if [[ "${1:-}" == api && "${2:-}" == --method && '
+        '"${3:-}" == DELETE ]]; then\n'
+        '  expected_endpoint="repos/${REPOSITORY}/issues/${PR_NUMBER}/labels/${LABEL_NAME}"\n'
+        '  if [[ "${GH_TOKEN}" != "${LABEL_TOKEN}" || '
+        '"${4:-}" != "${expected_endpoint}" ]]; then\n'
         "    echo 'unexpected label deletion request' >&2\n"
         "    exit 1\n"
         "  fi\n"
-        "  printf '%s\\n' \"${4}\" >> \"${MOCK_GH_CALLS}\"\n"
+        '  printf \'%s\\n\' "${4}" >> "${MOCK_GH_CALLS}"\n'
         "  exit 0\n"
         "fi\n"
         "if [[ ${MOCK_API_ERROR} == true ]]; then\n"
@@ -126,9 +127,7 @@ def test_pending_team_member_is_rejected_and_label_is_removed(tmp_path: Path) ->
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
     """
-    result = _run_workflow_script(
-        tmp_path, api_error=False, membership="pending"
-    )
+    result = _run_workflow_script(tmp_path, api_error=False, membership="pending")
 
     assert result.returncode != 0
     assert "contributor is not an active member" in result.stdout
