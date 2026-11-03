@@ -33,7 +33,7 @@ def _workflow_script() -> str:
 
 
 def _run_workflow_script(
-    tmp_path: Path, *, api_error: bool
+    tmp_path: Path, *, api_error: bool, membership: str = "active"
 ) -> subprocess.CompletedProcess[str]:
     """Run the inline check with a fake gh command and controlled API result.
 
@@ -49,6 +49,18 @@ def _run_workflow_script(
     gh = bin_dir / "gh"
     gh.write_text(
         "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "if [[ \"${1:-}\" == api && \"${2:-}\" == --method && "
+        "\"${3:-}\" == DELETE ]]; then\n"
+        "  expected_endpoint=\"repos/${REPOSITORY}/issues/${PR_NUMBER}/labels/${LABEL_NAME}\"\n"
+        "  if [[ \"${GH_TOKEN}\" != \"${LABEL_TOKEN}\" || "
+        "\"${4:-}\" != \"${expected_endpoint}\" ]]; then\n"
+        "    echo 'unexpected label deletion request' >&2\n"
+        "    exit 1\n"
+        "  fi\n"
+        "  printf '%s\\n' \"${4}\" >> \"${MOCK_GH_CALLS}\"\n"
+        "  exit 0\n"
+        "fi\n"
         "if [[ ${MOCK_API_ERROR} == true ]]; then\n"
         "  echo 'gh: Not Found (HTTP 404)' >&2\n"
         "  exit 1\n"
@@ -62,13 +74,17 @@ def _run_workflow_script(
         **os.environ,
         "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
         "GH_TOKEN": "test-token",
+        "LABEL_TOKEN": "label-token",
         "ACTOR": "contributor",
         "TEAM_ORG": "ansible",
         "TEAM_SLUG": "ansible-staff-eng-leads",
         "LABEL_NAME": "breaking-change-approved",
         "LABEL_ACTION": "labeled",
+        "REPOSITORY": "ansible/awx",
+        "PR_NUMBER": "42",
+        "MOCK_GH_CALLS": str(tmp_path / "gh_calls"),
         "MOCK_API_ERROR": str(api_error).lower(),
-        "MOCK_MEMBERSHIP": "active",
+        "MOCK_MEMBERSHIP": membership,
     }
     return subprocess.run(
         ["/bin/bash", "-c", _workflow_script()],
@@ -102,3 +118,21 @@ def test_active_team_member_is_authorized(tmp_path: Path) -> None:
 
     assert result.returncode == 0
     assert "contributor is an active member" in result.stdout
+
+
+def test_pending_team_member_is_rejected_and_label_is_removed(tmp_path: Path) -> None:
+    """A pending member is rejected and the newly added label is removed.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
+    result = _run_workflow_script(
+        tmp_path, api_error=False, membership="pending"
+    )
+
+    assert result.returncode != 0
+    assert "contributor is not an active member" in result.stdout
+    assert "Removed 'breaking-change-approved'" in result.stdout
+    assert (tmp_path / "gh_calls").read_text(encoding="utf-8").splitlines() == [
+        "repos/ansible/awx/issues/42/labels/breaking-change-approved"
+    ]
