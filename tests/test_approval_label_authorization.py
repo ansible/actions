@@ -3,6 +3,7 @@
 import os
 import subprocess
 from pathlib import Path
+from typing import NamedTuple
 
 WORKFLOW = (
     Path(__file__).parents[1]
@@ -10,6 +11,20 @@ WORKFLOW = (
     / "workflows"
     / "approval-label-authorization.yml"
 )
+
+
+class GitHubEvent(NamedTuple):
+    """The GitHub event fields consumed by the authorization workflow.
+
+    Attributes:
+        name: The GitHub event name.
+        action: The event action.
+        label: The label attached to the event.
+    """
+
+    name: str = "pull_request_target"
+    action: str = "labeled"
+    label: str = "breaking-change-approved"
 
 
 def _workflow_script() -> str:
@@ -37,9 +52,7 @@ def _run_workflow_script(
     *,
     api_error: bool,
     membership: str = "active",
-    event_name: str = "pull_request_target",
-    event_action: str = "labeled",
-    event_label: str = "breaking-change-approved",
+    event: GitHubEvent | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run the inline check with a fake gh command and controlled API result.
 
@@ -47,13 +60,12 @@ def _run_workflow_script(
         tmp_path: A temporary directory for the fake ``gh`` command.
         api_error: Whether the mocked API call should fail.
         membership: The team membership state returned by the mocked API.
-        event_name: The GitHub event that invoked the reusable workflow.
-        event_action: The event action that invoked the reusable workflow.
-        event_label: The label attached to the triggering event.
+        event: The triggering event's name, action, and label.
 
     Returns:
         The completed shell process.
     """
+    event = event or GitHubEvent()
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     gh = bin_dir / "gh"
@@ -90,9 +102,9 @@ def _run_workflow_script(
         "TEAM_SLUG": "ansible-staff-eng-leads",
         "LABEL_NAME": "breaking-change-approved",
         "LABEL_ACTION": "labeled",
-        "EVENT_NAME": event_name,
-        "EVENT_ACTION": event_action,
-        "EVENT_LABEL": event_label,
+        "EVENT_NAME": event.name,
+        "EVENT_ACTION": event.action,
+        "EVENT_LABEL": event.label,
         "REPOSITORY": "ansible/awx",
         "PR_NUMBER": "42",
         "MOCK_GH_CALLS": str(tmp_path / "gh_calls"),
@@ -155,7 +167,11 @@ def test_wrong_event_type_fails_instead_of_skipping(tmp_path: Path) -> None:
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
     """
-    result = _run_workflow_script(tmp_path, api_error=False, event_name="pull_request")
+    result = _run_workflow_script(
+        tmp_path,
+        api_error=False,
+        event=GitHubEvent(name="pull_request"),
+    )
 
     assert result.returncode != 0
     assert "must be called from a pull_request_target workflow" in result.stdout
@@ -167,7 +183,11 @@ def test_wrong_event_action_fails_instead_of_skipping(tmp_path: Path) -> None:
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
     """
-    result = _run_workflow_script(tmp_path, api_error=False, event_action="opened")
+    result = _run_workflow_script(
+        tmp_path,
+        api_error=False,
+        event=GitHubEvent(action="opened"),
+    )
 
     assert result.returncode != 0
     assert "must be triggered by a labeled or unlabeled action" in result.stdout
@@ -179,7 +199,11 @@ def test_label_input_mismatch_fails_instead_of_skipping(tmp_path: Path) -> None:
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
     """
-    result = _run_workflow_script(tmp_path, api_error=False, event_label="other-label")
+    result = _run_workflow_script(
+        tmp_path,
+        api_error=False,
+        event=GitHubEvent(label="other-label"),
+    )
 
     assert result.returncode != 0
     assert "does not match the configured approval label" in result.stdout
