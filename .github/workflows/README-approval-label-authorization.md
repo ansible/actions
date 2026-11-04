@@ -2,11 +2,10 @@
 
 `approval-label-authorization.yml` is a reusable workflow that verifies the
 person who applied or removed `breaking-change-approved` belongs to the
-`ansible-staff-eng-leads` GitHub team in the organization that calls the
-reusable workflow. It checks the actor from the
-`pull_request_target` label event. If an actor is not an active member, or
-membership cannot be verified, the workflow removes the label when the event
-added it and fails the check.
+`ansible-staff-eng-leads` GitHub team in the `ansible` organization. It checks
+the actor from the `pull_request_target` label event. If an actor is not an
+active member, or membership cannot be verified, the workflow removes the label
+when the event added it and fails the check.
 
 ## Caller workflow
 
@@ -34,10 +33,10 @@ jobs:
     uses: ansible/actions/.github/workflows/approval-label-authorization.yml@<FULL_COMMIT_SHA>
     with:
       app-client-id: >-
-        ${{ vars.ANSIBLE_AAP_API_CHANGE_APPROVAL_BOT_APP_CLIENT_ID }}
+        ${{ vars.ANSIBLE_ORG_MEMBERS_READ_ONLY_APP_CLIENT_ID }}
     secrets:
       app-private-key: >-
-        ${{ secrets.ANSIBLE_AAP_API_CHANGE_APPROVAL_BOT_APP_PRIVATE_KEY }}
+        ${{ secrets.ANSIBLE_ORG_MEMBERS_READ_ONLY_APP_PRIVATE_KEY }}
 ```
 
 The reusable workflow does not check out or run pull request code. Keep the
@@ -68,29 +67,35 @@ events and reports a required check.
 
 ## Token and branch protection
 
-The GitHub App must be installed in each calling organization with the
-organization-level **Members: read-only** permission. In each organization,
-configure these Actions values and grant access only to repositories using the
-caller workflow:
+Install the private `org-members-read-only` GitHub App in the `ansible`
+organization only, with the organization-level **Members: read-only**
+permission. Repositories in all four organizations can call this reusable
+workflow; it always mints a token for the `ansible` installation and checks
+membership in `ansible/ansible-staff-eng-leads`. The App does not need to be
+installed in the other calling organizations or have repository permissions.
 
-- Variable `ANSIBLE_AAP_API_CHANGE_APPROVAL_BOT_APP_CLIENT_ID`: the App client
+Configure the same App client ID and private key in each calling organization
+(`ansible`, `ansible-automation-platform`, `syntara-orchestration`, and
+`automation-nexus`) as organization-level Actions values. Grant access only to
+the repositories using the caller workflow:
+
+- Variable `ANSIBLE_ORG_MEMBERS_READ_ONLY_APP_CLIENT_ID`: the App client
   ID. This is not a secret.
-- Secret `ANSIBLE_AAP_API_CHANGE_APPROVAL_BOT_APP_PRIVATE_KEY`: the App's
+- Secret `ANSIBLE_ORG_MEMBERS_READ_ONLY_APP_PRIVATE_KEY`: the App's
   private key.
 
-The values are organization-specific settings, even when the same App is used
-across multiple organizations. The caller passes the variable and secret to
-the reusable workflow. It mints an installation token for the calling
-repository's organization, scoped to **Members: read-only**, and uses that
-short-lived token only for the team-membership lookup. The App must be
-installed in the organization, and the team must be visible to the App.
+The variable and secret must be configured separately in each organization;
+the private key value is the same for the App in every caller organization.
+The reusable workflow creates a short-lived installation token for the App's
+`ansible` installation, scoped to **Members: read-only**, and uses it only for
+the membership lookup in `ansible`.
 
 The caller also needs `pull-requests: write` permission. The workflow uses its
 `GITHUB_TOKEN` to remove an unauthorized label; the GitHub App installation
 token is used only to check team membership.
 
-Both the App client ID and private key must be configured. If either value is
-missing, the App is not installed in the calling organization, or the
+Both the App client ID and private key must be configured for each caller. If
+either value is missing, the App is not installed in `ansible`, or its
 installation does not have Members read permission, token creation or the
 membership lookup fails and the authorization check fails closed. The
 verification step still runs if token creation fails so it can attempt to

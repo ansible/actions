@@ -15,12 +15,12 @@ on:
         type: string
         default: ansible-staff-eng-leads
       app-client-id:
-        description: Client ID of the GitHub App installed in the calling organization.
+        description: Client ID of the GitHub App installed in the ansible organization.
         required: false
         type: string
     secrets:
       app-private-key:
-        description: Private key for the GitHub App installed in the calling organization.
+        description: Private key for the GitHub App installed in the ansible organization.
         required: false
 
 permissions:
@@ -41,7 +41,7 @@ jobs:
         with:
           client-id: ${{ inputs.app-client-id }}
           private-key: ${{ secrets.app-private-key }}
-          owner: ${{ github.repository_owner }}
+          owner: ansible
           permission-members: read
 
       - name: Verify the label actor belongs to the approval team
@@ -49,7 +49,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           LABEL_TOKEN: ${{ github.token }}
           ACTOR: ${{ github.event.sender.login }}
-          TEAM_ORG: ${{ github.repository_owner }}
+          TEAM_ORG: ansible
           TEAM_SLUG: ${{ inputs.team-slug }}
           LABEL_NAME: ${{ inputs.approval-label }}
           LABEL_ACTION: ${{ github.event.action }}
