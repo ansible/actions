@@ -4,6 +4,7 @@ Sorin
 codespell
 docstrings
 envlist
+katex
 mediatype
 minmax
 nonbreaking
