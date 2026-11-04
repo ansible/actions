@@ -54,6 +54,8 @@ def _run_workflow_script(
     membership: str = "active",
     event: GitHubEvent | None = None,
     approval_label: str = "breaking-change-approved",
+    label_write_error: bool = False,
+    label_present_after_restore: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     """Run the inline check with a fake gh command and controlled API result.
 
@@ -93,7 +95,25 @@ def _run_workflow_script(
         "    echo 'unexpected label restoration request' >&2\n"
         "    exit 1\n"
         "  fi\n"
+        "  if [[ ${MOCK_LABEL_WRITE_ERROR} == true ]]; then\n"
+        "    echo 'gh: label write failed' >&2\n"
+        "    exit 1\n"
+        "  fi\n"
         '  printf \'%s\\n\' "${4}?${6}" >> "${MOCK_GH_CALLS}"\n'
+        "  exit 0\n"
+        "fi\n"
+        'if [[ "${1:-}" == api && "${2:-}" == --paginate ]]; then\n'
+        '  expected_endpoint="repos/${REPOSITORY}/issues/${PR_NUMBER}/labels"\n'
+        '  if [[ "${GH_TOKEN}" != "${LABEL_TOKEN}" || '
+        '"${3:-}" != "${expected_endpoint}" || '
+        '"${4:-}" != "--jq" || "${5:-}" != ".[].name" ]]; then\n'
+        "    echo 'unexpected label verification request' >&2\n"
+        "    exit 1\n"
+        "  fi\n"
+        '  printf \'%s\\n\' "${3}?${4}=${5}" >> "${MOCK_GH_CALLS}"\n'
+        "  if [[ ${MOCK_LABEL_PRESENT_AFTER_RESTORE} == true ]]; then\n"
+        '    printf \'%s\\n\' "${LABEL_NAME}"\n'
+        "  fi\n"
         "  exit 0\n"
         "fi\n"
         "if [[ ${MOCK_API_ERROR} == true ]]; then\n"
@@ -123,6 +143,8 @@ def _run_workflow_script(
         "MOCK_GH_CALLS": str(tmp_path / "gh_calls"),
         "MOCK_API_ERROR": str(api_error).lower(),
         "MOCK_MEMBERSHIP": membership,
+        "MOCK_LABEL_WRITE_ERROR": str(label_write_error).lower(),
+        "MOCK_LABEL_PRESENT_AFTER_RESTORE": str(label_present_after_restore).lower(),
     }
     return subprocess.run(
         ["/bin/bash", "-c", _workflow_script()],
@@ -192,7 +214,7 @@ def test_pending_team_member_is_rejected_and_label_is_removed(tmp_path: Path) ->
 
 
 def test_pending_team_member_cannot_remove_label(tmp_path: Path) -> None:
-    """An unauthorized removal is reversed by restoring the approval label.
+    """A restored and verified approval label makes the check pass.
 
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
@@ -204,12 +226,69 @@ def test_pending_team_member_cannot_remove_label(tmp_path: Path) -> None:
         event=GitHubEvent(action="unlabeled"),
     )
 
-    assert result.returncode != 0
+    assert result.returncode == 0
     assert "contributor is not an active member" in result.stdout
-    assert "Restored 'breaking-change-approved'" in result.stdout
+    assert "Restored and verified 'breaking-change-approved'" in result.stdout
+    assert "check passes because the approval state is intact" in result.stdout
     assert (tmp_path / "gh_calls").read_text(encoding="utf-8").splitlines() == [
-        "repos/ansible/awx/issues/42/labels?labels[]=breaking-change-approved"
+        "repos/ansible/awx/issues/42/labels?labels[]=breaking-change-approved",
+        "repos/ansible/awx/issues/42/labels?--jq=.[].name",
     ]
+
+
+def test_unverified_member_removal_passes_after_restoration(tmp_path: Path) -> None:
+    """Membership API failure is tolerated if the approval label is restored.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
+    result = _run_workflow_script(
+        tmp_path,
+        api_error=True,
+        event=GitHubEvent(action="unlabeled"),
+    )
+
+    assert result.returncode == 0
+    assert "gh: Not Found (HTTP 404)" in result.stderr
+    assert "The approval label was restored" in result.stdout
+
+
+def test_member_removal_fails_if_label_is_missing_after_restore(
+    tmp_path: Path,
+) -> None:
+    """A successful POST is insufficient if the label is still absent.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
+    result = _run_workflow_script(
+        tmp_path,
+        api_error=False,
+        membership="pending",
+        event=GitHubEvent(action="unlabeled"),
+        label_present_after_restore=False,
+    )
+
+    assert result.returncode != 0
+    assert "Could not verify that 'breaking-change-approved' was restored" in result.stdout
+
+
+def test_member_removal_fails_if_restoration_request_fails(tmp_path: Path) -> None:
+    """An unsuccessful label restoration keeps the authorization check red.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
+    result = _run_workflow_script(
+        tmp_path,
+        api_error=False,
+        membership="pending",
+        event=GitHubEvent(action="unlabeled"),
+        label_write_error=True,
+    )
+
+    assert result.returncode != 0
+    assert "Could not restore 'breaking-change-approved'" in result.stdout
 
 
 def test_reusable_workflow_filters_using_approval_label_input() -> None:

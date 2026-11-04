@@ -5,8 +5,11 @@ person who applied or removed `breaking-change-approved` belongs to the
 `ansible-staff-eng-leads` GitHub team in the `ansible` organization. It checks
 the actor from the `pull_request_target` label event. If an actor is not an
 active member, or membership cannot be verified, the workflow reverses the
-label change and fails the check: it removes an unauthorized addition or
-restores an unauthorized removal.
+label change. It removes an unauthorized addition and fails the check because
+the approval label is absent. It restores an unauthorized removal; if
+restoration succeeds, it checks that the label is present and passes only if
+the approval state is intact. The check fails if the workflow cannot restore
+and verify the label.
 
 ## Caller workflow
 
@@ -106,11 +109,10 @@ verification step still runs if token creation fails so it can attempt to
 remove a newly added label using the caller's `GITHUB_TOKEN`.
 
 Require the `approval-label-authorization` check in the repository's target
-branch rules. This makes an unauthorized label change fail the merge gate. If
-membership cannot be verified, the workflow reverses the label change
-(removing an unauthorized addition or restoring an unauthorized removal) and
-fails the check; the Actions log retains the API error for troubleshooting.
-The normal breaking-change workflow should separately fail when the approval
+branch rules. If membership cannot be verified, the workflow reverses the label
+change; the check fails if an addition is removed or a removal cannot be
+restored. The Actions log retains the API error for troubleshooting. The
+normal breaking-change workflow should separately fail when the approval
 label is absent.
 
 ## Approval scope and new commits

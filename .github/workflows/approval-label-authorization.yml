@@ -85,8 +85,10 @@ jobs:
                   "repos/${REPOSITORY}/issues/${PR_NUMBER}/labels/${LABEL_NAME}" \
                   >/dev/null; then
                   echo "::notice::Removed '${LABEL_NAME}' because ${ACTOR}'s team membership could not be authorized."
+                  return 0
                 else
                   echo "::error::Could not remove '${LABEL_NAME}'. Check that the workflow token has pull-requests: write permission."
+                  return 1
                 fi
                 ;;
               unlabeled)
@@ -95,32 +97,52 @@ jobs:
                   "repos/${REPOSITORY}/issues/${PR_NUMBER}/labels" \
                   -f "labels[]=${LABEL_NAME}" \
                   >/dev/null; then
-                  echo "::notice::Restored '${LABEL_NAME}' because ${ACTOR}'s team membership could not be authorized."
+                  if current_labels=$(GH_TOKEN="${LABEL_TOKEN}" gh api \
+                    --paginate \
+                    "repos/${REPOSITORY}/issues/${PR_NUMBER}/labels" \
+                    --jq '.[].name') && printf '%s\n' "${current_labels}" | grep -Fqx -- "${LABEL_NAME}"; then
+                    echo "::notice::Restored and verified '${LABEL_NAME}' because ${ACTOR}'s team membership could not be authorized."
+                    return 0
+                  fi
+
+                  echo "::error::Could not verify that '${LABEL_NAME}' was restored."
+                  return 1
                 else
                   echo "::error::Could not restore '${LABEL_NAME}'. Check that the workflow token has pull-requests: write permission."
+                  return 1
                 fi
                 ;;
             esac
           }
 
-          if [[ -z "${GH_TOKEN}" ]]; then
-            echo "::error::Could not create a GitHub App installation token. Check that the caller passes the App client ID and private key and that the App is installed in ${TEAM_ORG} with Members read permission."
-            restore_unauthorized_label_change
+          handle_unverified_label_change() {
+            if [[ "${LABEL_ACTION}" == "unlabeled" ]]; then
+              if restore_unauthorized_label_change; then
+                echo "::notice::The approval label was restored; the check passes because the approval state is intact."
+                exit 0
+              fi
+            else
+              restore_unauthorized_label_change || true
+            fi
+
             exit 1
+          }
+
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::warning::Could not create a GitHub App installation token. Check that the caller passes the App client ID and private key and that the App is installed in ${TEAM_ORG} with Members read permission."
+            handle_unverified_label_change
           fi
 
           if ! membership=$(gh api \
             "orgs/${TEAM_ORG}/teams/${TEAM_SLUG}/memberships/${ACTOR}" \
             --jq '.state'); then
-            echo "::error::Could not verify whether ${ACTOR} belongs to ${TEAM_ORG}/${TEAM_SLUG}. Check that the GitHub App is installed in ${TEAM_ORG} with Members read permission and that the actor is a team member."
-            restore_unauthorized_label_change
-            exit 1
+            echo "::warning::Could not verify whether ${ACTOR} belongs to ${TEAM_ORG}/${TEAM_SLUG}. Check that the GitHub App is installed in ${TEAM_ORG} with Members read permission and that the actor is a team member."
+            handle_unverified_label_change
           fi
 
           if [[ "${membership}" != "active" ]]; then
-            echo "::error::${ACTOR} is not an active member of ${TEAM_ORG}/${TEAM_SLUG}; they cannot ${LABEL_ACTION} the '${LABEL_NAME}' label."
-            restore_unauthorized_label_change
-            exit 1
+            echo "::warning::${ACTOR} is not an active member of ${TEAM_ORG}/${TEAM_SLUG}; they cannot ${LABEL_ACTION} the '${LABEL_NAME}' label."
+            handle_unverified_label_change
           fi
 
           echo "::notice::${ACTOR} is an active member of ${TEAM_ORG}/${TEAM_SLUG}; the '${LABEL_NAME}' label change is authorized."
