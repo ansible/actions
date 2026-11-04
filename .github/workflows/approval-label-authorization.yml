@@ -31,6 +31,7 @@ permissions:
 jobs:
   approval-label-authorization:
     name: approval-label-authorization
+    if: github.event.label.name == inputs.approval-label
     runs-on: ubuntu-24.04
     steps:
       - name: Create GitHub App installation token
@@ -76,24 +77,35 @@ jobs:
             exit 1
           fi
 
-          remove_label_if_added_by_unauthorized_actor() {
-            if [[ "${LABEL_ACTION}" != "labeled" ]]; then
-              return
-            fi
-
-            if GH_TOKEN="${LABEL_TOKEN}" gh api \
-              --method DELETE \
-              "repos/${REPOSITORY}/issues/${PR_NUMBER}/labels/${LABEL_NAME}" \
-              >/dev/null; then
-              echo "::notice::Removed '${LABEL_NAME}' because ${ACTOR}'s team membership could not be authorized."
-            else
-              echo "::error::Could not remove '${LABEL_NAME}'. Check that the workflow token has pull-requests: write permission."
-            fi
+          restore_unauthorized_label_change() {
+            case "${LABEL_ACTION}" in
+              labeled)
+                if GH_TOKEN="${LABEL_TOKEN}" gh api \
+                  --method DELETE \
+                  "repos/${REPOSITORY}/issues/${PR_NUMBER}/labels/${LABEL_NAME}" \
+                  >/dev/null; then
+                  echo "::notice::Removed '${LABEL_NAME}' because ${ACTOR}'s team membership could not be authorized."
+                else
+                  echo "::error::Could not remove '${LABEL_NAME}'. Check that the workflow token has pull-requests: write permission."
+                fi
+                ;;
+              unlabeled)
+                if GH_TOKEN="${LABEL_TOKEN}" gh api \
+                  --method POST \
+                  "repos/${REPOSITORY}/issues/${PR_NUMBER}/labels" \
+                  -f "labels[]=${LABEL_NAME}" \
+                  >/dev/null; then
+                  echo "::notice::Restored '${LABEL_NAME}' because ${ACTOR}'s team membership could not be authorized."
+                else
+                  echo "::error::Could not restore '${LABEL_NAME}'. Check that the workflow token has pull-requests: write permission."
+                fi
+                ;;
+            esac
           }
 
           if [[ -z "${GH_TOKEN}" ]]; then
             echo "::error::Could not create a GitHub App installation token. Check that the caller passes the App client ID and private key and that the App is installed in ${TEAM_ORG} with Members read permission."
-            remove_label_if_added_by_unauthorized_actor
+            restore_unauthorized_label_change
             exit 1
           fi
 
@@ -101,13 +113,13 @@ jobs:
             "orgs/${TEAM_ORG}/teams/${TEAM_SLUG}/memberships/${ACTOR}" \
             --jq '.state'); then
             echo "::error::Could not verify whether ${ACTOR} belongs to ${TEAM_ORG}/${TEAM_SLUG}. Check that the GitHub App is installed in ${TEAM_ORG} with Members read permission and that the actor is a team member."
-            remove_label_if_added_by_unauthorized_actor
+            restore_unauthorized_label_change
             exit 1
           fi
 
           if [[ "${membership}" != "active" ]]; then
             echo "::error::${ACTOR} is not an active member of ${TEAM_ORG}/${TEAM_SLUG}; they cannot ${LABEL_ACTION} the '${LABEL_NAME}' label."
-            remove_label_if_added_by_unauthorized_actor
+            restore_unauthorized_label_change
             exit 1
           fi
 

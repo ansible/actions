@@ -4,8 +4,9 @@
 person who applied or removed `breaking-change-approved` belongs to the
 `ansible-staff-eng-leads` GitHub team in the `ansible` organization. It checks
 the actor from the `pull_request_target` label event. If an actor is not an
-active member, or membership cannot be verified, the workflow removes the label
-when the event added it and fails the check.
+active member, or membership cannot be verified, the workflow reverses the
+label change and fails the check: it removes an unauthorized addition or
+restores an unauthorized removal.
 
 ## Caller workflow
 
@@ -29,9 +30,9 @@ permissions:
 
 jobs:
   approval-label-authorization:
-    if: github.event.label.name == 'breaking-change-approved'
     uses: ansible/actions/.github/workflows/approval-label-authorization.yml@<FULL_COMMIT_SHA>
     with:
+      approval-label: breaking-change-approved
       app-client-id: >-
         ${{ vars.ANSIBLE_ORG_MEMBERS_READ_ONLY_APP_CLIENT_ID }}
     secrets:
@@ -41,7 +42,10 @@ jobs:
 
 The reusable workflow does not check out or run pull request code. Keep the
 caller on `pull_request_target` so `github.event.sender.login` identifies the
-person who changed the label.
+person who changed the label. The reusable workflow filters events against its
+`approval-label` input, so callers should not add a separate hardcoded label
+filter. Set `approval-label` in `with` when using a label other than the
+default `breaking-change-approved`.
 
 ## Required Actions event policy
 
@@ -103,8 +107,9 @@ remove a newly added label using the caller's `GITHUB_TOKEN`.
 
 Require the `approval-label-authorization` check in the repository's target
 branch rules. This makes an unauthorized label change fail the merge gate. If
-membership cannot be verified when the label is added, the workflow removes it
-and fails the check; the Actions log retains the API error for troubleshooting.
+membership cannot be verified, the workflow reverses the label change
+(removing an unauthorized addition or restoring an unauthorized removal) and
+fails the check; the Actions log retains the API error for troubleshooting.
 The normal breaking-change workflow should separately fail when the approval
 label is absent.
 
