@@ -64,6 +64,9 @@ def _run_workflow_script(
         api_error: Whether the mocked API call should fail.
         membership: The team membership state returned by the mocked API.
         event: The triggering event's name, action, and label.
+        approval_label: The approval label configured for the workflow.
+        label_write_error: Whether mocked label writes should fail.
+        label_present_after_restore: Whether verification reports the label.
 
     Returns:
         The completed shell process.
@@ -112,7 +115,7 @@ def _run_workflow_script(
         "  fi\n"
         '  printf \'%s\\n\' "${3}?${4}=${5}" >> "${MOCK_GH_CALLS}"\n'
         "  if [[ ${MOCK_LABEL_PRESENT_AFTER_RESTORE} == true ]]; then\n"
-        '    printf \'%s\\n\' "${LABEL_NAME}"\n'
+        "    printf '%s\\n' \"${LABEL_NAME}\"\n"
         "  fi\n"
         "  exit 0\n"
         "fi\n"
@@ -270,7 +273,9 @@ def test_member_removal_fails_if_label_is_missing_after_restore(
     )
 
     assert result.returncode != 0
-    assert "Could not verify that 'breaking-change-approved' was restored" in result.stdout
+    assert (
+        "Could not verify that 'breaking-change-approved' was restored" in result.stdout
+    )
 
 
 def test_member_removal_fails_if_restoration_request_fails(tmp_path: Path) -> None:
