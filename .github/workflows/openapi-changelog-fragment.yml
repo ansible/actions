@@ -85,14 +85,24 @@ jobs:
               return new RegExp(`^${regexPattern}$`).test(filename);
             };
 
-            const changedSpecs = files
-              .filter(f => ['added', 'modified', 'removed', 'renamed'].includes(f.status))
-              .filter(f => {
-                const names = [f.filename];
-                if (f.previous_filename) names.push(f.previous_filename);
-                return names.some(n => globMatch(specPaths, n));
-              })
-              .map(f => f.filename);
+            const changedSpecs = [];
+            for (const f of files) {
+              if (!['added', 'modified', 'removed', 'renamed'].includes(f.status)) continue;
+
+              if (f.status === 'renamed') {
+                const oldMatches = f.previous_filename && globMatch(specPaths, f.previous_filename);
+                const newMatches = globMatch(specPaths, f.filename);
+                if (oldMatches && !newMatches) {
+                  changedSpecs.push({ path: f.previous_filename, status: 'removed' });
+                } else if (!oldMatches && newMatches) {
+                  changedSpecs.push({ path: f.filename, status: 'added' });
+                } else if (oldMatches && newMatches) {
+                  changedSpecs.push({ path: f.filename, previous_path: f.previous_filename, status: 'renamed' });
+                }
+              } else if (globMatch(specPaths, f.filename)) {
+                changedSpecs.push({ path: f.filename, status: f.status });
+              }
+            }
 
             const fragmentFiles = files
               .filter(f => ['added', 'modified'].includes(f.status))
@@ -110,7 +120,8 @@ jobs:
             core.setOutput('fragment-paths', fragmentFiles.join('\n'));
 
             if (hasSpecChanges) {
-              core.notice(`Detected OpenAPI spec changes: ${changedSpecs.join(', ')}`);
+              const specSummary = changedSpecs.map(s => `${s.path} (${s.status})`).join(', ');
+              core.notice(`Detected OpenAPI spec changes: ${specSummary}`);
             } else {
               core.notice('No OpenAPI spec changes detected');
             }
@@ -243,18 +254,23 @@ jobs:
         run: |
           set -e
 
-          changed_specs=$(echo "$CHANGED_SPECS" | jq -r '.[]')
-          first_spec=$(echo "$changed_specs" | head -n 1)
+          first_path=$(echo "$CHANGED_SPECS" | jq -r '.[0].path')
+          first_status=$(echo "$CHANGED_SPECS" | jq -r '.[0].status')
+          first_prev=$(echo "$CHANGED_SPECS" | jq -r '.[0].previous_path // empty')
 
-          echo "Generating skeleton fragment for: $first_spec"
+          echo "Generating skeleton fragment for: $first_path (${first_status})"
 
           has_base=false
-          if git show "origin/${BASE_REF}:${first_spec}" > /tmp/base-spec 2>/dev/null; then
+          base_path="${first_path}"
+          if [ "$first_status" = "renamed" ] && [ -n "$first_prev" ]; then
+            base_path="${first_prev}"
+          fi
+          if git show "origin/${BASE_REF}:${base_path}" > /tmp/base-spec 2>/dev/null; then
             has_base=true
           fi
 
           has_head=false
-          if [ -f "${first_spec}" ]; then
+          if [ -f "${first_path}" ]; then
             has_head=true
           fi
 
@@ -267,7 +283,7 @@ jobs:
           OASDIFF_EXIT=0
           if [ "$has_base" = "true" ] && [ "$has_head" = "true" ]; then
             set +e
-            oasdiff changelog /tmp/base-spec "${first_spec}" \
+            oasdiff changelog /tmp/base-spec "${first_path}" \
               --format json \
               > /tmp/oasdiff-changelog.json 2>/tmp/oasdiff-stderr.log
             OASDIFF_EXIT=$?
@@ -292,7 +308,7 @@ jobs:
           is_breaking="false"
           change_title="OpenAPI specification updated"
 
-          if [ "$has_base" = "true" ] && [ "$has_head" = "false" ]; then
+          if [ "$first_status" = "removed" ] || { [ "$has_base" = "true" ] && [ "$has_head" = "false" ]; }; then
             change_type="removed"
             is_breaking="true"
             change_title="API specification removed"
