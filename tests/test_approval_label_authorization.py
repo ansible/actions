@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import NamedTuple
 
@@ -27,6 +28,27 @@ class GitHubEvent(NamedTuple):
     label: str = "breaking-change-approved"
 
 
+@dataclass(frozen=True)
+class WorkflowScenario:
+    """Inputs that control the mocked GitHub API and triggering event.
+
+    Attributes:
+        api_error: Whether the mocked membership API call should fail.
+        membership: The team membership state returned by the mock.
+        event: The triggering event's name, action, and label.
+        approval_label: The approval label configured for the workflow.
+        label_write_error: Whether mocked label writes should fail.
+        label_present_after_restore: Whether verification reports the label.
+    """
+
+    api_error: bool = False
+    membership: str = "active"
+    event: GitHubEvent = field(default_factory=GitHubEvent)
+    approval_label: str = "breaking-change-approved"
+    label_write_error: bool = False
+    label_present_after_restore: bool = True
+
+
 def _workflow_script() -> str:
     """Return the workflow's inline shell script so tests exercise the real code.
 
@@ -50,28 +72,19 @@ def _workflow_script() -> str:
 def _run_workflow_script(
     tmp_path: Path,
     *,
-    api_error: bool,
-    membership: str = "active",
-    event: GitHubEvent | None = None,
-    approval_label: str = "breaking-change-approved",
-    label_write_error: bool = False,
-    label_present_after_restore: bool = True,
+    scenario: WorkflowScenario | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run the inline check with a fake gh command and controlled API result.
 
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
-        api_error: Whether the mocked API call should fail.
-        membership: The team membership state returned by the mocked API.
-        event: The triggering event's name, action, and label.
-        approval_label: The approval label configured for the workflow.
-        label_write_error: Whether mocked label writes should fail.
-        label_present_after_restore: Whether verification reports the label.
+        scenario: The mocked API behavior and triggering event.
 
     Returns:
         The completed shell process.
     """
-    event = event or GitHubEvent()
+    scenario = scenario or WorkflowScenario()
+    event = scenario.event
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     gh = bin_dir / "gh"
@@ -136,7 +149,7 @@ def _run_workflow_script(
         "ACTOR": "contributor",
         "TEAM_ORG": "ansible",
         "TEAM_SLUG": "ansible-staff-eng-leads",
-        "LABEL_NAME": approval_label,
+        "LABEL_NAME": scenario.approval_label,
         "LABEL_ACTION": event.action,
         "EVENT_NAME": event.name,
         "EVENT_ACTION": event.action,
@@ -144,10 +157,12 @@ def _run_workflow_script(
         "REPOSITORY": "ansible/awx",
         "PR_NUMBER": "42",
         "MOCK_GH_CALLS": str(tmp_path / "gh_calls"),
-        "MOCK_API_ERROR": str(api_error).lower(),
-        "MOCK_MEMBERSHIP": membership,
-        "MOCK_LABEL_WRITE_ERROR": str(label_write_error).lower(),
-        "MOCK_LABEL_PRESENT_AFTER_RESTORE": str(label_present_after_restore).lower(),
+        "MOCK_API_ERROR": str(scenario.api_error).lower(),
+        "MOCK_MEMBERSHIP": scenario.membership,
+        "MOCK_LABEL_WRITE_ERROR": str(scenario.label_write_error).lower(),
+        "MOCK_LABEL_PRESENT_AFTER_RESTORE": str(
+            scenario.label_present_after_restore
+        ).lower(),
     }
     return subprocess.run(
         ["/bin/bash", "-c", _workflow_script()],
@@ -164,7 +179,10 @@ def test_non_member_is_rejected_and_api_error_is_visible(tmp_path: Path) -> None
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
     """
-    result = _run_workflow_script(tmp_path, api_error=True)
+    result = _run_workflow_script(
+        tmp_path,
+        scenario=WorkflowScenario(api_error=True),
+    )
 
     assert result.returncode != 0
     assert "gh: Not Found (HTTP 404)" in result.stderr
@@ -177,7 +195,7 @@ def test_active_team_member_is_authorized(tmp_path: Path) -> None:
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
     """
-    result = _run_workflow_script(tmp_path, api_error=False)
+    result = _run_workflow_script(tmp_path)
 
     assert result.returncode == 0
     assert "contributor is an active member" in result.stdout
@@ -191,9 +209,10 @@ def test_custom_approval_label_is_authorized(tmp_path: Path) -> None:
     """
     result = _run_workflow_script(
         tmp_path,
-        api_error=False,
-        approval_label="api-change-approved",
-        event=GitHubEvent(label="api-change-approved"),
+        scenario=WorkflowScenario(
+            approval_label="api-change-approved",
+            event=GitHubEvent(label="api-change-approved"),
+        ),
     )
 
     assert result.returncode == 0
@@ -206,7 +225,10 @@ def test_pending_team_member_is_rejected_and_label_is_removed(tmp_path: Path) ->
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
     """
-    result = _run_workflow_script(tmp_path, api_error=False, membership="pending")
+    result = _run_workflow_script(
+        tmp_path,
+        scenario=WorkflowScenario(membership="pending"),
+    )
 
     assert result.returncode != 0
     assert "contributor is not an active member" in result.stdout
@@ -224,9 +246,10 @@ def test_pending_team_member_cannot_remove_label(tmp_path: Path) -> None:
     """
     result = _run_workflow_script(
         tmp_path,
-        api_error=False,
-        membership="pending",
-        event=GitHubEvent(action="unlabeled"),
+        scenario=WorkflowScenario(
+            membership="pending",
+            event=GitHubEvent(action="unlabeled"),
+        ),
     )
 
     assert result.returncode == 0
@@ -247,8 +270,10 @@ def test_unverified_member_removal_passes_after_restoration(tmp_path: Path) -> N
     """
     result = _run_workflow_script(
         tmp_path,
-        api_error=True,
-        event=GitHubEvent(action="unlabeled"),
+        scenario=WorkflowScenario(
+            api_error=True,
+            event=GitHubEvent(action="unlabeled"),
+        ),
     )
 
     assert result.returncode == 0
@@ -266,10 +291,11 @@ def test_member_removal_fails_if_label_is_missing_after_restore(
     """
     result = _run_workflow_script(
         tmp_path,
-        api_error=False,
-        membership="pending",
-        event=GitHubEvent(action="unlabeled"),
-        label_present_after_restore=False,
+        scenario=WorkflowScenario(
+            membership="pending",
+            event=GitHubEvent(action="unlabeled"),
+            label_present_after_restore=False,
+        ),
     )
 
     assert result.returncode != 0
@@ -286,10 +312,11 @@ def test_member_removal_fails_if_restoration_request_fails(tmp_path: Path) -> No
     """
     result = _run_workflow_script(
         tmp_path,
-        api_error=False,
-        membership="pending",
-        event=GitHubEvent(action="unlabeled"),
-        label_write_error=True,
+        scenario=WorkflowScenario(
+            membership="pending",
+            event=GitHubEvent(action="unlabeled"),
+            label_write_error=True,
+        ),
     )
 
     assert result.returncode != 0
@@ -319,8 +346,7 @@ def test_wrong_event_type_fails_instead_of_skipping(tmp_path: Path) -> None:
     """
     result = _run_workflow_script(
         tmp_path,
-        api_error=False,
-        event=GitHubEvent(name="pull_request"),
+        scenario=WorkflowScenario(event=GitHubEvent(name="pull_request")),
     )
 
     assert result.returncode != 0
@@ -335,8 +361,7 @@ def test_wrong_event_action_fails_instead_of_skipping(tmp_path: Path) -> None:
     """
     result = _run_workflow_script(
         tmp_path,
-        api_error=False,
-        event=GitHubEvent(action="opened"),
+        scenario=WorkflowScenario(event=GitHubEvent(action="opened")),
     )
 
     assert result.returncode != 0
@@ -351,8 +376,7 @@ def test_label_input_mismatch_fails_instead_of_skipping(tmp_path: Path) -> None:
     """
     result = _run_workflow_script(
         tmp_path,
-        api_error=False,
-        event=GitHubEvent(label="other-label"),
+        scenario=WorkflowScenario(event=GitHubEvent(label="other-label")),
     )
 
     assert result.returncode != 0
