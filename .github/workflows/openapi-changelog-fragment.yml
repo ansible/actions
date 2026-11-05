@@ -105,7 +105,7 @@ jobs:
             }
 
             const fragmentFiles = files
-              .filter(f => ['added', 'modified'].includes(f.status))
+              .filter(f => ['added', 'modified', 'renamed'].includes(f.status))
               .filter(f => f.filename.startsWith(fragmentDir + '/'))
               .filter(f => f.filename.endsWith('.yaml') || f.filename.endsWith('.yml'))
               .filter(f => !f.filename.endsWith('.gitkeep'))
