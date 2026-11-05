@@ -1,9 +1,13 @@
+Oasdiff
 Sbarnea
 Sorin
 codespell
 docstrings
 envlist
 katex
+mediatype
 minmax
+nonbreaking
+oasdiff
 pydoclint
 showlocals
