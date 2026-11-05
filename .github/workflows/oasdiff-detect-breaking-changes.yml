@@ -28,24 +28,6 @@ on:
         required: false
         type: boolean
         default: true
-      base-spec-url:
-        description: >
-          URL to download the baseline spec from (e.g., an S3 public URL).
-          Use this for services whose spec is not committed to the repo.
-          If omitted, the baseline is extracted from the target branch via
-          git show.
-        required: false
-        type: string
-        default: ""
-      generate-command:
-        description: >
-          Shell command to generate the OpenAPI spec file at spec-path.
-          Use this for DRF services that produce their spec dynamically
-          (e.g., via drf-spectacular). Runs after checkout, before oasdiff.
-          If omitted, the spec is read from the repo as checked out.
-        required: false
-        type: string
-        default: ""
     outputs:
       has-breaking-changes:
         description: "Whether breaking changes were detected"
@@ -76,38 +58,20 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Generate spec (DRF services)
-        if: inputs.generate-command != ''
-        env:
-          SPEC_PATH: ${{ inputs.spec-path }}
-        run: ${{ inputs.generate-command }}
-
-      - name: Extract baseline spec
+      - name: Extract baseline spec from target branch
         id: baseline
         env:
           SPEC_PATH: ${{ inputs.spec-path }}
           BASE_REF: ${{ github.event.pull_request.base.ref || github.base_ref }}
-          BASE_SPEC_URL: ${{ inputs.base-spec-url }}
         run: |
-          if [ -n "${BASE_SPEC_URL}" ]; then
-            echo "Downloading baseline from ${BASE_SPEC_URL}"
-            if curl -sSfL "${BASE_SPEC_URL}" -o /tmp/base-spec 2>/dev/null; then
-              echo "has-baseline=true" >> "$GITHUB_OUTPUT"
-              echo "Baseline spec downloaded"
-            else
-              echo "has-baseline=false" >> "$GITHUB_OUTPUT"
-              echo "::notice::Failed to download baseline from ${BASE_SPEC_URL} — skipping breaking change detection"
-            fi
-          else
-            echo "Comparing ${SPEC_PATH} against branch ${BASE_REF}"
+          echo "Comparing ${SPEC_PATH} against branch ${BASE_REF}"
 
-            if git show "origin/${BASE_REF}:${SPEC_PATH}" > /tmp/base-spec 2>/dev/null; then
-              echo "has-baseline=true" >> "$GITHUB_OUTPUT"
-              echo "Baseline spec found on ${BASE_REF}"
-            else
-              echo "has-baseline=false" >> "$GITHUB_OUTPUT"
-              echo "::notice::No baseline spec found on ${BASE_REF} — skipping breaking change detection"
-            fi
+          if git show "origin/${BASE_REF}:${SPEC_PATH}" > /tmp/base-spec 2>/dev/null; then
+            echo "has-baseline=true" >> "$GITHUB_OUTPUT"
+            echo "Baseline spec found on ${BASE_REF}"
+          else
+            echo "has-baseline=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No baseline spec found on ${BASE_REF} — skipping breaking change detection"
           fi
 
       - name: Install oasdiff
