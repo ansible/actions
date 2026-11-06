@@ -334,10 +334,12 @@ jobs:
           # Generate skeleton YAML
           cat > /tmp/changelog-skeleton.yaml << EOF
           title: "${change_title}"
-          type: ${change_type}
+          type:
+            - ${change_type}
           breaking: ${is_breaking}
           summary: "TODO: Describe the change and its impact on API consumers"
-          endpoint: "*"
+          endpoint:
+            - "*"
           EOF
 
           # Add migration if breaking

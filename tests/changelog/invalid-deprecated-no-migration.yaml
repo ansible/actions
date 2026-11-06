@@ -1,6 +1,8 @@
 ---
 title: "Deprecate old search syntax"
-type: deprecated
+type:
+  - deprecated
 breaking: false
 summary: "The legacy search syntax is now deprecated."
-endpoint: "/api/v2/search"
+endpoint:
+  - "/api/v2/search"
