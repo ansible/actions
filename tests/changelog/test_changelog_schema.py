@@ -93,6 +93,7 @@ def test_valid_fragment_passes(fixture: str) -> None:
         "invalid-deprecated-no-migration.yaml",
         "invalid-deprecated-list-no-migration.yaml",
         "invalid-glob-endpoint.yaml",
+        "invalid-security-no-cve.yaml",
     ],
 )
 def test_invalid_fragment_fails(fixture: str) -> None:

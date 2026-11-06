@@ -86,6 +86,26 @@
         "required": ["migration"],
         "errorMessage": "migration is required when type includes deprecated"
       }
+    },
+    {
+      "if": {
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "contains": {
+              "const": "security"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "summary": {
+            "pattern": "CVE-[0-9]{4}-[0-9]{4,}"
+          }
+        },
+        "errorMessage": "summary must include a CVE identifier (e.g., CVE-2025-12345) when type includes security"
+      }
     }
   ]
 }
