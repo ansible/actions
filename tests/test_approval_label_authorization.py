@@ -36,7 +36,6 @@ class WorkflowScenario:
         api_error: Whether the mocked membership API call should fail.
         membership: The team membership state returned by the mock.
         event: The triggering event's name, action, and label.
-        approval_label: The approval label configured for the workflow.
         label_write_error: Whether mocked label writes should fail.
         label_present_after_restore: Whether verification reports the label.
     """
@@ -44,7 +43,6 @@ class WorkflowScenario:
     api_error: bool = False
     membership: str = "active"
     event: GitHubEvent = field(default_factory=GitHubEvent)
-    approval_label: str = "breaking-change-approved"
     label_write_error: bool = False
     label_present_after_restore: bool = True
 
@@ -86,7 +84,7 @@ def _run_workflow_script(
     scenario = scenario or WorkflowScenario()
     event = scenario.event
     bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
+    bin_dir.mkdir(parents=True)
     gh = bin_dir / "gh"
     gh.write_text(
         "#!/usr/bin/env bash\n"
@@ -149,7 +147,7 @@ def _run_workflow_script(
         "ACTOR": "contributor",
         "TEAM_ORG": "ansible",
         "TEAM_SLUG": "ansible-staff-eng-leads",
-        "LABEL_NAME": scenario.approval_label,
+        "LABEL_NAME": "breaking-change-approved",
         "LABEL_ACTION": event.action,
         "EVENT_NAME": event.name,
         "EVENT_ACTION": event.action,
@@ -201,22 +199,20 @@ def test_active_team_member_is_authorized(tmp_path: Path) -> None:
     assert "contributor is an active member" in result.stdout
 
 
-def test_custom_approval_label_is_authorized(tmp_path: Path) -> None:
-    """A configured custom label is checked against the same event label.
+def test_other_label_event_is_ignored(tmp_path: Path) -> None:
+    """Unrelated labels do not invoke the membership lookup.
 
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
     """
     result = _run_workflow_script(
         tmp_path,
-        scenario=WorkflowScenario(
-            approval_label="api-change-approved",
-            event=GitHubEvent(label="api-change-approved"),
-        ),
+        scenario=WorkflowScenario(event=GitHubEvent(label="bug")),
     )
 
     assert result.returncode == 0
-    assert "'api-change-approved' label change is authorized" in result.stdout
+    assert "Ignoring 'labeled' event for unrelated label 'bug'" in result.stdout
+    assert not (tmp_path / "gh_calls").exists()
 
 
 def test_pending_team_member_is_rejected_and_label_is_removed(tmp_path: Path) -> None:
@@ -323,8 +319,8 @@ def test_member_removal_fails_if_restoration_request_fails(tmp_path: Path) -> No
     assert "Could not restore 'breaking-change-approved'" in result.stdout
 
 
-def test_reusable_workflow_filters_using_approval_label_input() -> None:
-    """The reusable workflow owns filtering so callers do not hardcode labels.
+def test_reusable_workflow_has_fixed_team_and_label_without_job_filter() -> None:
+    """The policy team and label are fixed in the reusable workflow.
 
     Returns:
         None.
@@ -334,8 +330,13 @@ def test_reusable_workflow_filters_using_approval_label_input() -> None:
         encoding="utf-8"
     )
 
-    assert "if: github.event.label.name == inputs.approval-label" in workflow
-    assert "if: github.event.label.name == 'breaking-change-approved'" not in readme
+    assert "if: github.event.label.name == inputs.approval-label" not in workflow
+    assert "approval-label:" not in workflow
+    assert "team-slug:" not in workflow
+    assert "TEAM_SLUG: ansible-staff-eng-leads" in workflow
+    assert "LABEL_NAME: breaking-change-approved" in workflow
+    assert "      approval-label:" not in readme
+    assert "types: [opened, synchronize, reopened, labeled, unlabeled]" in readme
 
 
 def test_wrong_event_type_fails_instead_of_skipping(tmp_path: Path) -> None:
@@ -353,31 +354,37 @@ def test_wrong_event_type_fails_instead_of_skipping(tmp_path: Path) -> None:
     assert "must be called from a pull_request_target workflow" in result.stdout
 
 
-def test_wrong_event_action_fails_instead_of_skipping(tmp_path: Path) -> None:
-    """A caller using an unsupported action fails the security gate.
+def test_lifecycle_events_complete_without_membership_lookup(tmp_path: Path) -> None:
+    """Lifecycle events report success without needing a label actor check.
+
+    Args:
+        tmp_path: A temporary directory for the fake ``gh`` command.
+    """
+    for action in ("opened", "synchronize", "reopened"):
+        event_dir = tmp_path / action
+        result = _run_workflow_script(
+            event_dir,
+            scenario=WorkflowScenario(event=GitHubEvent(action=action, label="")),
+        )
+
+        assert result.returncode == 0
+        assert f"Pull request lifecycle event '{action}'" in result.stdout
+        assert not (event_dir / "gh_calls").exists()
+
+
+def test_unsupported_event_action_fails_instead_of_skipping(tmp_path: Path) -> None:
+    """A caller using an unsupported event action fails the security gate.
 
     Args:
         tmp_path: A temporary directory for the fake ``gh`` command.
     """
     result = _run_workflow_script(
         tmp_path,
-        scenario=WorkflowScenario(event=GitHubEvent(action="opened")),
+        scenario=WorkflowScenario(event=GitHubEvent(action="closed")),
     )
 
     assert result.returncode != 0
-    assert "must be triggered by a labeled or unlabeled action" in result.stdout
-
-
-def test_label_input_mismatch_fails_instead_of_skipping(tmp_path: Path) -> None:
-    """A caller whose configured label differs from the event label fails.
-
-    Args:
-        tmp_path: A temporary directory for the fake ``gh`` command.
-    """
-    result = _run_workflow_script(
-        tmp_path,
-        scenario=WorkflowScenario(event=GitHubEvent(label="other-label")),
+    assert (
+        "must be triggered by opened, synchronize, reopened, labeled, or unlabeled"
+        in result.stdout
     )
-
-    assert result.returncode != 0
-    assert "does not match the configured approval label" in result.stdout

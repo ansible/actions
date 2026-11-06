@@ -2,14 +2,15 @@
 
 `approval-label-authorization.yml` is a reusable workflow that verifies the
 person who applied or removed `breaking-change-approved` belongs to the
-`ansible-staff-eng-leads` GitHub team in the `ansible` organization. It checks
-the actor from the `pull_request_target` label event. If an actor is not an
-active member, or membership cannot be verified, the workflow reverses the
-label change. It removes an unauthorized addition and fails the check because
-the approval label is absent. It restores an unauthorized removal; if
-restoration succeeds, it checks that the label is present and passes only if
-the approval state is intact. The check fails if the workflow cannot restore
-and verify the label.
+`ansible-staff-eng-leads` GitHub team in the `ansible` organization. This is the
+one centrally authorized team and label; callers cannot override either value.
+For label events, it checks the actor from the `pull_request_target` event. If
+an actor is not an active member, or membership cannot be verified, the
+workflow reverses the label change. It removes an unauthorized addition and
+fails the check because the approval label is absent. It restores an
+unauthorized removal; if restoration succeeds, it verifies that the label is
+present and passes only if the approval state is intact. The check fails if
+the workflow cannot restore and verify the label.
 
 ## Caller workflow
 
@@ -24,7 +25,7 @@ name: approval-label-authorization
 
 on:
   pull_request_target:
-    types: [labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -35,7 +36,6 @@ jobs:
   approval-label-authorization:
     uses: ansible/actions/.github/workflows/approval-label-authorization.yml@<FULL_COMMIT_SHA>
     with:
-      approval-label: breaking-change-approved
       app-client-id: >-
         ${{ vars.ANSIBLE_ORG_MEMBERS_READ_ONLY_APP_CLIENT_ID }}
     secrets:
@@ -45,10 +45,11 @@ jobs:
 
 The reusable workflow does not check out or run pull request code. Keep the
 caller on `pull_request_target` so `github.event.sender.login` identifies the
-person who changed the label. The reusable workflow filters events against its
-`approval-label` input, so callers should not add a separate hardcoded label
-filter. Set `approval-label` in `with` when using a label other than the
-default `breaking-change-approved`.
+person who changed the label. It validates the event inside the job, so do not
+add a job-level condition that could skip the required check. The `opened`,
+`synchronize`, and `reopened` events produce a successful check without a
+membership lookup because they do not change the label. Events for other
+labels are ignored; only `breaking-change-approved` is supported.
 
 ## Required Actions event policy
 
@@ -98,30 +99,34 @@ The reusable workflow creates a short-lived installation token for the App's
 the membership lookup in `ansible`.
 
 The caller also needs `pull-requests: write` permission. The workflow uses its
-`GITHUB_TOKEN` to remove an unauthorized label; the GitHub App installation
-token is used only to check team membership.
+`GITHUB_TOKEN` to reverse an unauthorized label change; the GitHub App
+installation token is used only to check team membership.
 
 Both the App client ID and private key must be configured for each caller. If
 either value is missing, the App is not installed in `ansible`, or its
 installation does not have Members read permission, token creation or the
-membership lookup fails and the authorization check fails closed. The
-verification step still runs if token creation fails so it can attempt to
-remove a newly added label using the caller's `GITHUB_TOKEN`.
+membership lookup fails. The verification step still runs if token creation
+fails so it can attempt to reverse a label change using the caller's
+`GITHUB_TOKEN`.
 
 Require the `approval-label-authorization` check in the repository's target
-branch rules. If membership cannot be verified, the workflow reverses the label
-change; the check fails if an addition is removed or a removal cannot be
-restored. The Actions log retains the API error for troubleshooting. The
-normal breaking-change workflow should separately fail when the approval
-label is absent.
+branch rules. It runs on pull request open, synchronize, reopen, and label
+changes so the required check reports a result throughout the PR lifecycle. If
+membership cannot be verified, the workflow reverses the label change; the
+check fails if an addition is removed or a removal cannot be restored. The
+Actions log retains the API error for troubleshooting. The normal
+breaking-change workflow should separately fail when the approval label is
+absent.
 
 ## Approval scope and new commits
 
 This workflow checks **who** added or removed the label. It does not inspect the
 pull request's code, bind the approval to a commit, or remove the label when new
-commits are pushed. It runs on label changes only. Therefore, a new commit by
-itself does not require re-approval: the label remains until someone removes it,
-and a check that only tests whether the label exists will still see it.
+commits are pushed. The authorization check reports a successful no-op on
+`opened`, `synchronize`, and `reopened`; those events do not invalidate an
+existing approval. Therefore, a new commit by itself does not require
+re-approval: the label remains until someone removes it, and a check that only
+tests whether the label exists will still see it.
 
 There is currently no automated rule here for deciding whether a new commit
 changes the approved breaking-change scope. The consuming repository's

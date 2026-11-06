@@ -4,16 +4,6 @@ name: approval-label-authorization
 on:
   workflow_call:
     inputs:
-      approval-label:
-        description: Label whose applier must belong to the approval team.
-        required: false
-        type: string
-        default: breaking-change-approved
-      team-slug:
-        description: GitHub slug of the team allowed to apply or remove the label.
-        required: false
-        type: string
-        default: ansible-staff-eng-leads
       app-client-id:
         description: Client ID of the GitHub App installed in the ansible organization.
         required: false
@@ -31,13 +21,16 @@ permissions:
 jobs:
   approval-label-authorization:
     name: approval-label-authorization
-    if: github.event.label.name == inputs.approval-label
     runs-on: ubuntu-24.04
     steps:
       - name: Create GitHub App installation token
         id: app-token
+        if: >-
+          github.event_name == 'pull_request_target' &&
+          (github.event.action == 'labeled' || github.event.action == 'unlabeled') &&
+          github.event.label.name == 'breaking-change-approved'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        # Let the verification step remove a newly added label if token minting fails.
+        # Let the verification step reverse a label change if token minting fails.
         continue-on-error: true
         with:
           client-id: ${{ inputs.app-client-id }}
@@ -51,8 +44,8 @@ jobs:
           LABEL_TOKEN: ${{ github.token }}
           ACTOR: ${{ github.event.sender.login }}
           TEAM_ORG: ansible
-          TEAM_SLUG: ${{ inputs.team-slug }}
-          LABEL_NAME: ${{ inputs.approval-label }}
+          TEAM_SLUG: ansible-staff-eng-leads
+          LABEL_NAME: breaking-change-approved
           LABEL_ACTION: ${{ github.event.action }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_ACTION: ${{ github.event.action }}
@@ -67,14 +60,22 @@ jobs:
             exit 1
           fi
 
-          if [[ "${EVENT_ACTION}" != "labeled" && "${EVENT_ACTION}" != "unlabeled" ]]; then
-            echo "::error::This reusable workflow must be triggered by a labeled or unlabeled action; received '${EVENT_ACTION}'."
-            exit 1
-          fi
+          case "${EVENT_ACTION}" in
+            opened|synchronize|reopened)
+              echo "::notice::Pull request lifecycle event '${EVENT_ACTION}'; no approval-label change needs authorization."
+              exit 0
+              ;;
+            labeled|unlabeled)
+              ;;
+            *)
+              echo "::error::This reusable workflow must be triggered by opened, synchronize, reopened, labeled, or unlabeled; received '${EVENT_ACTION}'."
+              exit 1
+              ;;
+          esac
 
           if [[ "${EVENT_LABEL}" != "${LABEL_NAME}" ]]; then
-            echo "::error::Event label '${EVENT_LABEL}' does not match the configured approval label '${LABEL_NAME}'. Check the caller workflow's approval-label input."
-            exit 1
+            echo "::notice::Ignoring '${EVENT_ACTION}' event for unrelated label '${EVENT_LABEL}'. Only '${LABEL_NAME}' is centrally authorized by this workflow."
+            exit 0
           fi
 
           restore_unauthorized_label_change() {
