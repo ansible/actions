@@ -100,7 +100,7 @@ jobs:
             }
 
             const fragmentFiles = files
-              .filter(f => ['added', 'modified'].includes(f.status))
+              .filter(f => ['added', 'modified', 'renamed'].includes(f.status))
               .filter(f => f.filename.startsWith(fragmentDir + '/'))
               .filter(f => f.filename.endsWith('.yaml') || f.filename.endsWith('.yml'))
               .filter(f => !f.filename.endsWith('.gitkeep'))
@@ -130,7 +130,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ansible/actions
-          ref: ${{ github.job_workflow_sha }}
+          ref: ${{ job.workflow_sha }}
           path: .ansible-actions
           sparse-checkout: config/changelog-fragment-schema.json
           sparse-checkout-cone-mode: false
@@ -329,10 +329,12 @@ jobs:
           # Generate skeleton YAML
           cat > /tmp/changelog-skeleton.yaml << EOF
           title: "${change_title}"
-          type: ${change_type}
+          type:
+            - ${change_type}
           breaking: ${is_breaking}
           summary: "TODO: Describe the change and its impact on API consumers"
-          endpoint: "*"
+          endpoint:
+            - "*"
           EOF
 
           # Add migration if breaking
@@ -399,29 +401,6 @@ jobs:
 
             fs.writeFileSync('/tmp/changelog-results.json', JSON.stringify(results, null, 2));
             core.notice(`Results written to /tmp/changelog-results.json`);
-
-      - name: Check for api-changelog label
-        id: check-label
-        if: steps.detect-changes.outputs.has-spec-changes == 'true'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        with:
-          script: |
-            if (!context.payload.pull_request) {
-              core.notice('Not a pull request context — skipping label check');
-              return;
-            }
-
-            const labels = context.payload.pull_request.labels || [];
-            const hasLabel = labels.some(l => l.name === 'api-changelog');
-
-            if (!hasLabel) {
-              core.warning(
-                'OpenAPI spec modified but api-changelog label not present. ' +
-                'Apply the label if this PR requires API changelog review.'
-              );
-            } else {
-              core.notice('api-changelog label is present');
-            }
 
       - name: Set final status
         id: final-status

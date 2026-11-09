@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ansible/actions/blob/main/config/changelog-fragment-schema.json",
   "title": "API Changelog Fragment Schema",
-  "description": "Schema for changelog fragment YAML files (PR #1660, AAP-92950)",
+  "description": "Schema for changelog fragment YAML files",
   "type": "object",
   "required": ["title", "type", "breaking", "summary"],
   "additionalProperties": true,
@@ -13,22 +13,14 @@
       "description": "Brief title for the change"
     },
     "type": {
-      "description": "Type of change (single value or array)",
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"]
-        },
-        {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"]
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        }
-      ]
+      "description": "Type of change (always an array, even for a single type)",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
     "breaking": {
       "type": "boolean",
@@ -43,28 +35,17 @@
       "description": "Detailed description of the change (TODO placeholders not allowed)"
     },
     "endpoint": {
-      "description": "Affected endpoint(s): '*' for all, single path, or array of paths",
-      "oneOf": [
-        {
-          "const": "*",
-          "description": "Wildcard: affects all endpoints"
-        },
-        {
-          "type": "string",
-          "pattern": "^/[^*]+$",
-          "description": "Single endpoint path (must start with /, no * allowed)"
-        },
-        {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^/[^*]+$"
-          },
-          "minItems": 1,
-          "uniqueItems": true,
-          "description": "Array of endpoint paths"
-        }
-      ]
+      "description": "Affected endpoint(s): use [\"*\"] for all endpoints, or a list of paths. Omit for behavioral changes not tied to specific endpoints.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "oneOf": [
+          { "const": "*" },
+          { "pattern": "^/[^*]+$" }
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
     "migration": {
       "type": "string",
@@ -95,21 +76,6 @@
         "required": ["type"],
         "properties": {
           "type": {
-            "const": "deprecated"
-          }
-        }
-      },
-      "then": {
-        "required": ["migration"],
-        "errorMessage": "migration is required when type is deprecated"
-      }
-    },
-    {
-      "if": {
-        "required": ["type"],
-        "properties": {
-          "type": {
-            "type": "array",
             "contains": {
               "const": "deprecated"
             }
@@ -118,7 +84,27 @@
       },
       "then": {
         "required": ["migration"],
-        "errorMessage": "migration is required when type array contains deprecated"
+        "errorMessage": "migration is required when type includes deprecated"
+      }
+    },
+    {
+      "if": {
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "contains": {
+              "const": "security"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "summary": {
+            "pattern": "CVE-[0-9]{4}-[0-9]{4,}"
+          }
+        },
+        "errorMessage": "summary must include a CVE identifier (e.g., CVE-2025-12345) when type includes security"
       }
     }
   ]

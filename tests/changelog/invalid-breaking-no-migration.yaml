@@ -1,6 +1,8 @@
 ---
 title: "Remove legacy API endpoints"
-type: removed
+type:
+  - removed
 breaking: true
 summary: "All v1 API endpoints have been removed."
-endpoint: "/api/v1/legacy"
+endpoint:
+  - "/api/v1/legacy"

@@ -1,6 +1,7 @@
 ---
 title: "Add pagination to list endpoints"
-type: changed
+type:
+  - changed
 breaking: false
 summary: "List endpoints now return paginated results with page_size defaulting to 25."
 endpoint:

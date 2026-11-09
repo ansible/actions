@@ -2,4 +2,4 @@
 paths:
   ".github/workflows/openapi-changelog-fragment.yml":
     ignore:
-      - 'property "job_workflow_sha" is not defined in object type'
+      - 'property "workflow_sha" is not defined in object type'

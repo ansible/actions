@@ -1,0 +1,8 @@
+---
+title: "Fix authentication bypass vulnerability"
+type:
+  - security
+breaking: false
+summary: "Fixed an authentication bypass that allowed unauthenticated access to admin endpoints."
+endpoint:
+  - "/api/v2/admin/"
