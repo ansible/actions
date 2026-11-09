@@ -161,7 +161,7 @@ if [[ "$path" == */comments && "$method" == POST ]]; then
   [[ "$LABEL_TOKEN" == "$GH_TOKEN" ]] || { echo "bad comment token" >&2; exit 1; }
   event_id=$(sed -nE 's/.*label_event_id=([0-9]+).*/\1/p' <<<"$form")
   [[ -n "$event_id" ]] || { echo "missing marker id" >&2; exit 1; }
-  jq --arg id "$event_id" 'if any(.[]; tostring == $id) then . else . + [($id | tonumber)] end' "$MOCK_MARKERS_FILE" > "$MOCK_MARKERS_FILE.tmp"
+  jq --arg id "$event_id" 'if any(.[]; tostring == $id) then . else . + [($id | fromjson)] end' "$MOCK_MARKERS_FILE" > "$MOCK_MARKERS_FILE.tmp"
   mv "$MOCK_MARKERS_FILE.tmp" "$MOCK_MARKERS_FILE"
   exit 0
 fi
