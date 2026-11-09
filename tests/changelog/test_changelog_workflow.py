@@ -104,16 +104,19 @@ class TestSpecChangeDetection:
     """Tests for spec change classification including renames."""
 
     def test_added_spec(self) -> None:
+        """Added spec file is detected."""
         files = [{"filename": "openapi/v2.yaml", "status": "added"}]
         result = classify_spec_changes(files, "openapi/*.yaml")
         assert result == [{"path": "openapi/v2.yaml", "status": "added"}]
 
     def test_modified_spec(self) -> None:
+        """Modified spec file is detected."""
         files = [{"filename": "openapi/v1.yaml", "status": "modified"}]
         result = classify_spec_changes(files, "openapi/*.yaml")
         assert result == [{"path": "openapi/v1.yaml", "status": "modified"}]
 
     def test_removed_spec(self) -> None:
+        """Removed spec file is detected."""
         files = [{"filename": "openapi/v1.yaml", "status": "removed"}]
         result = classify_spec_changes(files, "openapi/*.yaml")
         assert result == [{"path": "openapi/v1.yaml", "status": "removed"}]
@@ -170,17 +173,19 @@ class TestSpecChangeDetection:
             }
         ]
         result = classify_spec_changes(files, "openapi/*.yaml")
-        assert result == []
+        assert not result
 
     def test_non_spec_file_ignored(self) -> None:
+        """Non-spec file modifications are excluded."""
         files = [{"filename": "README.md", "status": "modified"}]
         result = classify_spec_changes(files, "openapi/*.yaml")
-        assert result == []
+        assert not result
 
     def test_fragment_file_not_in_specs(self) -> None:
+        """Fragment files outside spec paths are excluded."""
         files = [{"filename": "changelogs/fragments/fix.yaml", "status": "added"}]
         result = classify_spec_changes(files, "openapi/*.yaml")
-        assert result == []
+        assert not result
 
 
 class TestSkeletonBreakingDetection:
@@ -193,7 +198,7 @@ class TestSkeletonBreakingDetection:
 
     @staticmethod
     def _run_jq_breaking_count(oasdiff_json: list[dict[str, Any]]) -> int:
-        result = subprocess.run(  # noqa: S603
+        result = subprocess.run(
             [  # noqa: S607
                 "jq",
                 "-r",
@@ -207,9 +212,10 @@ class TestSkeletonBreakingDetection:
         return int(result.stdout.strip())
 
     @pytest.mark.skipif(
-        subprocess.run(  # noqa: S603, S607
-            ["jq", "--version"],
+        subprocess.run(
+            ["jq", "--version"],  # noqa: S607
             capture_output=True,
+            check=False,
         ).returncode
         != 0,
         reason="jq not installed",
@@ -227,9 +233,10 @@ class TestSkeletonBreakingDetection:
         assert self._run_jq_breaking_count(changes) == 1
 
     @pytest.mark.skipif(
-        subprocess.run(  # noqa: S603, S607
-            ["jq", "--version"],
+        subprocess.run(
+            ["jq", "--version"],  # noqa: S607
             capture_output=True,
+            check=False,
         ).returncode
         != 0,
         reason="jq not installed",
@@ -247,9 +254,10 @@ class TestSkeletonBreakingDetection:
         assert self._run_jq_breaking_count(changes) == 0
 
     @pytest.mark.skipif(
-        subprocess.run(  # noqa: S603, S607
-            ["jq", "--version"],
+        subprocess.run(
+            ["jq", "--version"],  # noqa: S607
             capture_output=True,
+            check=False,
         ).returncode
         != 0,
         reason="jq not installed",
