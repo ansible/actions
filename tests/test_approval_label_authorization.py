@@ -150,7 +150,7 @@ if [[ "$path" == */timeline && "$method" == GET ]]; then
 fi
 if [[ "$path" == */comments && "$method" == GET ]]; then
   event_id=$(sed -nE 's/.*label_event_id=([0-9]+).*/\1/p' <<<"$filter")
-  if [[ -n "$event_id" ]] && jq -e --argjson id "$event_id" 'index($id) != null' "$MOCK_MARKERS_FILE" >/dev/null; then
+  if [[ -n "$event_id" ]] && jq -e --arg id "$event_id" 'any(.[]; tostring == $id)' "$MOCK_MARKERS_FILE" >/dev/null; then
     echo true
   else
     echo false
@@ -161,7 +161,7 @@ if [[ "$path" == */comments && "$method" == POST ]]; then
   [[ "$LABEL_TOKEN" == "$GH_TOKEN" ]] || { echo "bad comment token" >&2; exit 1; }
   event_id=$(sed -nE 's/.*label_event_id=([0-9]+).*/\1/p' <<<"$form")
   [[ -n "$event_id" ]] || { echo "missing marker id" >&2; exit 1; }
-  jq --argjson id "$event_id" 'if index($id) then . else . + [$id] end' "$MOCK_MARKERS_FILE" > "$MOCK_MARKERS_FILE.tmp"
+  jq --arg id "$event_id" 'if any(.[]; tostring == $id) then . else . + [($id | tonumber)] end' "$MOCK_MARKERS_FILE" > "$MOCK_MARKERS_FILE.tmp"
   mv "$MOCK_MARKERS_FILE.tmp" "$MOCK_MARKERS_FILE"
   exit 0
 fi
