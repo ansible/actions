@@ -18,11 +18,6 @@ on:
         required: false
         type: string
         default: "breaking-change-approved"
-      oasdiff-version:
-        description: "oasdiff CLI version (pinned; override for exceptional cases only)"
-        required: false
-        type: string
-        default: "1.18.5"
       fail-on-breaking:
         description: "Fail the check on breaking changes. Set false for dry-run rollout."
         required: false
@@ -77,7 +72,7 @@ jobs:
       - name: Install oasdiff
         if: steps.baseline.outputs.has-baseline == 'true'
         env:
-          OASDIFF_VERSION: ${{ inputs.oasdiff-version }}
+          OASDIFF_VERSION: "1.18.5"
           OASDIFF_SHA256: "9352233c1234bf5baf4d983078f7afff7bab4941abc253a14914f13ea31a3bf4"
         run: |
           DOWNLOAD_URL="https://github.com/Tufin/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
@@ -317,19 +312,19 @@ jobs:
                 `Breaking changes detected but "${overrideLabel}" label is present — ` +
                 `allowing merge with warning.\n` +
                 `Found ${breakingCount} breaking change(s): ${categoryList}.\n` +
-                `See the job summary for details or review the guidelines: ${docsUrl}`
+                `Details are posted in the companion PR comment. Guidelines: ${docsUrl}`
               );
             } else if (hasBreaking && failOnBreaking) {
               core.setFailed(
                 `${breakingCount} breaking change(s) detected: ${categoryList}.\n` +
-                `See the job summary tab for full details.\n` +
+                `Details are posted in the companion PR comment.\n` +
                 `To override, apply the "${overrideLabel}" label.\n` +
                 `Guidelines: ${docsUrl}`
               );
             } else if (hasBreaking && !failOnBreaking) {
               core.warning(
                 `${breakingCount} breaking change(s) detected (dry-run mode — not blocking): ${categoryList}.\n` +
-                `This would fail in production. See job summary for details.\n` +
+                `This would fail in production. Details are posted in the companion PR comment.\n` +
                 `Guidelines: ${docsUrl}`
               );
             }

@@ -46,6 +46,9 @@ on:
   workflow_run:
     workflows: ["Breaking Change Detection"]
     types: [completed]
+permissions:
+  actions: read
+  pull-requests: write
 jobs:
   comment:
     uses: ansible/actions/.github/workflows/oasdiff-post-breaking-change-comment.yml@<sha>
@@ -57,7 +60,6 @@ jobs:
 | --- | --- | --- | --- |
 | `spec-path` | Yes | — | Path to the OpenAPI spec file |
 | `override-label` | No | `breaking-change-approved` | Override label |
-| `oasdiff-version` | No | `1.18.5` | oasdiff CLI version |
 | `fail-on-breaking` | No | `true` | Set `false` for dry-run mode |
 
 **Taxonomy reference:** `config/oasdiff-taxonomy-map.json` is the reference
