@@ -4,13 +4,19 @@
 person who applied or removed `breaking-change-approved` belongs to the
 `ansible-staff-eng-leads` GitHub team in the `ansible` organization. This is the
 one centrally authorized team and label; callers cannot override either value.
-For label events, it checks the actor from the `pull_request_target` event. If
-an actor is not an active member, or membership cannot be verified, the
-workflow reverses the label change. It removes an unauthorized addition and
-fails the check because the approval label is absent. It restores an
-unauthorized removal; if restoration succeeds, it verifies that the label is
-present and passes only if the approval state is intact. The check fails if
-the workflow cannot restore and verify the label.
+For label events, it checks the actor recorded in the PR's label-event history.
+After a successful membership check, it adds a comment marker from
+`github-actions[bot]` tied to that specific label event; markers from other
+comment authors do not count. On later PR events, it checks the current label
+against the marker, so a failed cleanup cannot be bypassed by a later
+`synchronize` or unrelated-label event. If a present label has no valid marker,
+the workflow verifies its recorded actor and writes the marker only after that
+check succeeds; otherwise it retries removing the label and fails the check.
+An unauthorized removal is restored only when the removed label had a valid
+authorization marker. If restoration succeeds, the workflow records a marker
+for the bot's restoration event and passes because the existing approval is
+intact. An unauthorized removal of an unverified label is left removed and
+fails the check.
 
 ## Caller workflow
 
@@ -44,12 +50,13 @@ jobs:
 ```
 
 The reusable workflow does not check out or run pull request code. Keep the
-caller on `pull_request_target` so `github.event.sender.login` identifies the
-person who changed the label. It validates the event inside the job, so do not
-add a job-level condition that could skip the required check. The `opened`,
-`synchronize`, and `reopened` events produce a successful check without a
-membership lookup because they do not change the label. Events for other
-labels are ignored; only `breaking-change-approved` is supported.
+caller on `pull_request_target` so it can inspect label-event history and
+identify the person who changed the label. It validates the event inside the
+job, so do not add a job-level condition that could skip the required check.
+The `opened`, `synchronize`, and `reopened` events verify the current approval
+label if it is present. Events for other labels also verify the current
+approval label; they cannot make a failed cleanup pass. Only
+`breaking-change-approved` is supported.
 
 ## Required Actions event policy
 
@@ -99,8 +106,9 @@ The reusable workflow creates a short-lived installation token for the App's
 the membership lookup in `ansible`.
 
 The caller also needs `pull-requests: write` permission. The workflow uses its
-`GITHUB_TOKEN` to reverse an unauthorized label change; the GitHub App
-installation token is used only to check team membership.
+`GITHUB_TOKEN` to read label history, manage the authorization marker comment,
+and reverse an unauthorized label change; the GitHub App installation token is
+used only to check team membership.
 
 Both the App client ID and private key must be configured for each caller. If
 either value is missing, the App is not installed in `ansible`, or its
@@ -111,10 +119,11 @@ fails so it can attempt to reverse a label change using the caller's
 
 Require the `approval-label-authorization` check in the repository's target
 branch rules. It runs on pull request open, synchronize, reopen, and label
-changes so the required check reports a result throughout the PR lifecycle. If
-membership cannot be verified, the workflow reverses the label change; the
-check fails if an addition is removed or a removal cannot be restored. The
-Actions log retains the API error for troubleshooting. The normal
+changes so the required check revalidates a present approval throughout the PR
+lifecycle. If membership cannot be verified, the workflow retries cleanup; an
+unverified addition is removed and the check fails, and an unverified removal
+is restored only when a valid marker proves the label was previously
+authorized. The Actions log retains API errors for troubleshooting. The normal
 breaking-change workflow should separately fail when the approval label is
 absent.
 
