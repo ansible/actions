@@ -216,10 +216,10 @@ jobs:
               exit 0
             fi
             echo "::error::Membership was verified, but the authorization marker could not be recorded."
-          else
-            echo "::error::${latest_actor}'s approval label could not be authorized."
+            exit 1
           fi
 
+          echo "::error::${latest_actor}'s approval label could not be authorized."
           if remove_label; then
             echo "::notice::Removed the approval label because its authorization could not be established."
           else
