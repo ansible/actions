@@ -133,15 +133,22 @@ method=GET
 path=
 filter=
 form=
+slurp=false
+jq_filter=false
 while (($#)); do
   case "$1" in
     --method) method="$2"; shift 2 ;;
-    --jq) filter="$2"; shift 2 ;;
+    --jq) filter="$2"; jq_filter=true; shift 2 ;;
     -f) form="$2"; shift 2 ;;
-    --paginate|--slurp) shift ;;
+    --paginate) shift ;;
+    --slurp) slurp=true; shift ;;
     *) if [[ "$1" == repos/* || "$1" == orgs/* ]]; then path="$1"; fi; shift ;;
   esac
 done
+if [[ "$slurp" == true && "$jq_filter" == true ]]; then
+  echo 'the --slurp option is not supported with --jq or --template' >&2
+  exit 2
+fi
 printf '%s %s\n' "$method" "$path" >> "$MOCK_GH_CALLS"
 
 if [[ "$path" == */timeline && "$method" == GET ]]; then
@@ -149,12 +156,7 @@ if [[ "$path" == */timeline && "$method" == GET ]]; then
   exit 0
 fi
 if [[ "$path" == */comments && "$method" == GET ]]; then
-  event_id=$(sed -nE 's/.*label_event_id=([0-9]+).*/\1/p' <<<"$filter")
-  if [[ -n "$event_id" ]] && jq -e --arg id "$event_id" 'any(.[]; tostring == $id)' "$MOCK_MARKERS_FILE" >/dev/null; then
-    echo true
-  else
-    echo false
-  fi
+  jq '[.[] | tostring | {user:{login:"github-actions[bot]"},body:("Approval label authorization verified by the reusable workflow. <!-- approval-label-authorization:v1 label_event_id=" + . + " -->")}]' "$MOCK_MARKERS_FILE"
   exit 0
 fi
 if [[ "$path" == */comments && "$method" == POST ]]; then
@@ -243,6 +245,7 @@ def test_active_team_member_is_authorized_and_marker_is_written(
     result = _run_workflow_script(tmp_path)
 
     assert result.returncode == 0
+    assert "not supported with --jq" not in result.stderr
     assert "contributor is an active member" in result.stdout
     assert json.loads((tmp_path / "markers.json").read_text()) == [100]
 

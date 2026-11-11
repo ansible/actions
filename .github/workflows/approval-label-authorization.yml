@@ -71,9 +71,9 @@ jobs:
           marker_prefix="<!-- approval-label-authorization:v1 label_event_id="
 
           label_events() {
-            GH_TOKEN="${LABEL_TOKEN}" gh api --paginate --slurp \
+            GH_TOKEN="${LABEL_TOKEN}" gh api --paginate \
               "${api_root}/timeline" \
-              --jq "[.[][] | select((.event == \"labeled\" or .event == \"unlabeled\") and .label.name == \"${LABEL_NAME}\")] | sort_by(.created_at)"
+              | jq -s "[.[][] | select((.event == \"labeled\" or .event == \"unlabeled\") and .label.name == \"${LABEL_NAME}\")] | sort_by(.created_at)"
           }
 
           has_label() {
@@ -86,9 +86,9 @@ jobs:
           has_marker() {
             local event_id="$1"
             local marker="${marker_prefix}${event_id} -->"
-            GH_TOKEN="${LABEL_TOKEN}" gh api --paginate --slurp \
+            GH_TOKEN="${LABEL_TOKEN}" gh api --paginate \
               "${api_root}/comments" \
-              --jq "[.[][] | select(.user.login == \"github-actions[bot]\" and ((.body // \"\") | contains(\"${marker}\")))] | length > 0" \
+              | jq -s "[.[][] | select(.user.login == \"github-actions[bot]\" and ((.body // \"\") | contains(\"${marker}\")))] | length > 0" \
               | grep -qx true
           }
 
