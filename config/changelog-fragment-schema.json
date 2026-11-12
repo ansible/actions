@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ansible/actions/blob/main/config/changelog-fragment-schema.json",
+  "title": "API Changelog Fragment Schema",
+  "description": "Schema for changelog fragment YAML files",
+  "type": "object",
+  "required": ["title", "type", "breaking", "summary"],
+  "additionalProperties": true,
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Brief title for the change"
+    },
+    "type": {
+      "description": "Type of change (always an array, even for a single type)",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["added", "changed", "deprecated", "removed", "fixed", "security"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "breaking": {
+      "type": "boolean",
+      "description": "Whether this is a breaking change"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "[Tt][Oo][Dd][Oo]"
+      },
+      "description": "Detailed description of the change (TODO placeholders not allowed)"
+    },
+    "endpoint": {
+      "description": "Affected endpoint(s): use [\"*\"] for all endpoints, or a list of paths. Omit for behavioral changes not tied to specific endpoints.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "oneOf": [
+          { "const": "*" },
+          { "pattern": "^/[^*]+$" }
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "migration": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "[Tt][Oo][Dd][Oo]"
+      },
+      "description": "Migration guidance (required for breaking changes or deprecations, TODO placeholders not allowed)"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["breaking"],
+        "properties": {
+          "breaking": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": ["migration"],
+        "errorMessage": "migration is required when breaking is true"
+      }
+    },
+    {
+      "if": {
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "contains": {
+              "const": "deprecated"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["migration"],
+        "errorMessage": "migration is required when type includes deprecated"
+      }
+    },
+    {
+      "if": {
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "contains": {
+              "const": "security"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "summary": {
+            "pattern": "CVE-[0-9]{4}-[0-9]{4,}"
+          }
+        },
+        "errorMessage": "summary must include a CVE identifier (e.g., CVE-2025-12345) when type includes security"
+      }
+    }
+  ]
+}
