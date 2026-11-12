@@ -1,0 +1,228 @@
+---
+name: approval-label-authorization
+
+on:
+  workflow_call:
+    inputs:
+      app-client-id:
+        description: Client ID of the GitHub App installed in the ansible organization.
+        required: false
+        type: string
+    secrets:
+      app-private-key:
+        description: Private key for the GitHub App installed in the ansible organization.
+        required: false
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: write
+
+jobs:
+  approval-label-authorization:
+    name: approval-label-authorization
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create GitHub App installation token
+        id: app-token
+        if: >-
+          github.event_name == 'pull_request_target'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        # Let the verification step reverse a label change if token minting fails.
+        continue-on-error: true
+        with:
+          client-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.app-private-key }}
+          owner: ansible
+          permission-members: read
+
+      - name: Verify the label actor belongs to the approval team
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          LABEL_TOKEN: ${{ github.token }}
+          EVENT_ACTOR: ${{ github.event.sender.login }}
+          TEAM_ORG: ansible
+          TEAM_SLUG: ansible-staff-eng-leads
+          LABEL_NAME: breaking-change-approved
+          LABEL_ACTION: ${{ github.event.action }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" != "pull_request_target" ]]; then
+            echo "::error::This reusable workflow must be called from a pull_request_target workflow; received '${EVENT_NAME}'."
+            exit 1
+          fi
+
+          case "${EVENT_ACTION}" in
+            opened|synchronize|reopened|labeled|unlabeled)
+              ;;
+            *)
+              echo "::error::This reusable workflow must be triggered by opened, synchronize, reopened, labeled, or unlabeled; received '${EVENT_ACTION}'."
+              exit 1
+              ;;
+          esac
+
+          api_root="repos/${REPOSITORY}/issues/${PR_NUMBER}"
+          marker_prefix="<!-- approval-label-authorization:v1 label_event_id="
+
+          label_events() {
+            GH_TOKEN="${LABEL_TOKEN}" gh api --paginate \
+              "${api_root}/timeline" \
+              | jq -s "[.[][] | select((.event == \"labeled\" or .event == \"unlabeled\") and .label.name == \"${LABEL_NAME}\")] | sort_by(.created_at)"
+          }
+
+          has_label() {
+            local labels
+            labels=$(GH_TOKEN="${LABEL_TOKEN}" gh api --paginate \
+              "${api_root}/labels" --jq '.[].name') || return 2
+            printf '%s\n' "${labels}" | grep -Fqx -- "${LABEL_NAME}"
+          }
+
+          has_marker() {
+            local event_id="$1"
+            local marker="${marker_prefix}${event_id} -->"
+            GH_TOKEN="${LABEL_TOKEN}" gh api --paginate \
+              "${api_root}/comments" \
+              | jq -s "[.[][] | select(.user.login == \"github-actions[bot]\" and ((.body // \"\") | contains(\"${marker}\")))] | length > 0" \
+              | grep -qx true
+          }
+
+          write_marker() {
+            local event_id="$1"
+            local marker="${marker_prefix}${event_id} -->"
+            GH_TOKEN="${LABEL_TOKEN}" gh api --method POST \
+              "${api_root}/comments" \
+              -f "body=Approval label authorization verified by the reusable workflow. ${marker}" >/dev/null
+          }
+
+          check_membership() {
+            local actor="$1"
+            [[ -n "${GH_TOKEN}" ]] || return 2
+            local membership
+            membership=$(GH_TOKEN="${GH_TOKEN}" gh api \
+              "orgs/${TEAM_ORG}/teams/${TEAM_SLUG}/memberships/${actor}" \
+              --jq '.state') || return 2
+            [[ "${membership}" == active ]]
+          }
+
+          remove_label() {
+            GH_TOKEN="${LABEL_TOKEN}" gh api --method DELETE \
+              "${api_root}/labels/${LABEL_NAME}" >/dev/null
+          }
+
+          fail_closed_remove() {
+            echo "::error::$1"
+            if remove_label; then
+              echo "::notice::Removed the approval label while failing closed."
+            else
+              echo "::error::Could not remove the approval label; the check remains failed."
+            fi
+            exit 1
+          }
+
+          restore_label() {
+            GH_TOKEN="${LABEL_TOKEN}" gh api --method POST \
+              "${api_root}/labels" -f "labels[]=${LABEL_NAME}" >/dev/null || return 1
+            has_label
+          }
+
+          mark_restored_label_event() {
+            local previous_event_id="$1"
+            local events event_id event_action event_actor
+            events=$(label_events) || return 1
+            event_id=$(jq -r 'last | .id // empty' <<<"${events}")
+            event_action=$(jq -r 'last | .event // empty' <<<"${events}")
+            event_actor=$(jq -r 'last | .actor.login // empty' <<<"${events}")
+            [[ "${event_action}" == labeled && "${event_actor}" == "github-actions[bot]" && -n "${event_id}" && "${event_id}" != "${previous_event_id}" ]] || return 1
+            write_marker "${event_id}"
+          }
+
+          # A marker records that membership was successfully checked for this
+          # specific label-add event. Old markers cannot authorize a later
+          # remove/re-add cycle because each label event has a distinct ID.
+          current_label_state=absent
+          if has_label; then
+            current_label_state=present
+          else
+            label_query_status=$?
+            if [[ "${label_query_status}" -ne 1 ]]; then
+              echo "::error::Could not inspect the current PR labels."
+              exit 1
+            fi
+          fi
+
+          if [[ "${current_label_state}" == absent ]]; then
+            if [[ "${EVENT_ACTION}" != unlabeled || "${EVENT_LABEL}" != "${LABEL_NAME}" ]]; then
+              echo "::notice::The approval label is absent; no current approval needs authorization."
+              exit 0
+            fi
+
+            events=$(label_events) || { echo "::error::Could not inspect approval-label history."; exit 1; }
+            prior_event_id=$(jq -r '[.[] | select(.event == "labeled")][-1].id // empty' <<<"${events}")
+            if [[ -n "${prior_event_id}" ]] && has_marker "${prior_event_id}"; then
+              if ! check_membership "${EVENT_ACTOR}"; then
+                if restore_label && mark_restored_label_event "${prior_event_id}"; then
+                  echo "::notice::Restored the previously authorized approval after an unauthorized or unverifiable removal."
+                  exit 0
+                fi
+                echo "::error::Could not safely restore and mark the authorized approval label."
+                exit 1
+              fi
+            elif ! check_membership "${EVENT_ACTOR}"; then
+              echo "::error::${EVENT_ACTOR} removed an approval label without a valid authorization marker."
+              exit 1
+            fi
+
+            echo "::notice::The approval label is absent after an authorized removal."
+            exit 0
+          fi
+
+          events=$(label_events) || fail_closed_remove "Could not inspect approval-label history."
+          latest_event=$(jq -c 'last' <<<"${events}")
+          latest_action=$(jq -r '.event // empty' <<<"${latest_event}")
+          latest_event_id=$(jq -r '.id // empty' <<<"${latest_event}")
+          latest_actor=$(jq -r '.actor.login // empty' <<<"${latest_event}")
+
+          if [[ "${latest_action}" != labeled || -z "${latest_event_id}" || -z "${latest_actor}" ]]; then
+            fail_closed_remove "The approval label is present, but its latest label event could not be established."
+          fi
+
+          if has_marker "${latest_event_id}"; then
+            echo "::notice::The present approval label has a valid marker from a successful membership check."
+            exit 0
+          fi
+
+          # Recover if label restoration succeeded but recording its marker
+          # failed: only inherit authorization from the preceding marked add.
+          prior_unlabeled_id=$(jq -r 'if length >= 2 and .[-2].event == "unlabeled" then .[-2].id else empty end' <<<"${events}")
+          if [[ "${latest_actor}" == "github-actions[bot]" && -n "${prior_unlabeled_id}" ]]; then
+            prior_authorized_add=$(jq -r '[.[:-2][] | select(.event == "labeled")][-1].id // empty' <<<"${events}")
+            if [[ -n "${prior_authorized_add}" ]] && has_marker "${prior_authorized_add}"; then
+              if write_marker "${latest_event_id}"; then
+                echo "::notice::Recovered the authorization marker for a restored, previously authorized approval."
+                exit 0
+              fi
+            fi
+          fi
+
+          if check_membership "${latest_actor}"; then
+            if write_marker "${latest_event_id}"; then
+              echo "::notice::${latest_actor} is an active member of ${TEAM_ORG}/${TEAM_SLUG}; the current approval label is authorized."
+              exit 0
+            fi
+            echo "::error::Membership was verified, but the authorization marker could not be recorded."
+            exit 1
+          fi
+
+          echo "::error::${latest_actor}'s approval label could not be authorized."
+          if remove_label; then
+            echo "::notice::Removed the approval label because its authorization could not be established."
+          else
+            echo "::error::Could not remove the unauthorized approval label; the check remains failed."
+          fi
+          exit 1
