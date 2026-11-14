@@ -32,7 +32,7 @@ permissions:
 jobs:
   enforce:
     name: "Changelog fragment enforcement"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       has-spec-changes: ${{ steps.detect-changes.outputs.has-spec-changes }}
       has-fragment: ${{ steps.detect-changes.outputs.has-fragment }}
@@ -46,7 +46,7 @@ jobs:
 
       - name: Detect spec and fragment changes
         id: detect-changes
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           SPEC_PATHS: ${{ inputs.spec-paths }}
           FRAGMENT_DIR: ${{ inputs.fragment-dir }}
@@ -351,7 +351,7 @@ jobs:
       - name: Build results JSON
         id: build-results
         if: always()
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           HAS_SPEC_CHANGES: ${{ steps.detect-changes.outputs.has-spec-changes }}
           HAS_FRAGMENT: ${{ steps.detect-changes.outputs.has-fragment }}
@@ -405,7 +405,7 @@ jobs:
       - name: Set final status
         id: final-status
         if: always()
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           HAS_SPEC_CHANGES: ${{ steps.detect-changes.outputs.has-spec-changes }}
           HAS_FRAGMENT: ${{ steps.detect-changes.outputs.has-fragment }}
@@ -464,7 +464,7 @@ jobs:
 
       - name: Upload results artifact
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: changelog-fragment-results
           path: |
