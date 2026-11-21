@@ -41,7 +41,7 @@ permissions:
 jobs:
   detect:
     name: "oasdiff breaking change detection"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       has-breaking-changes: ${{ steps.evaluate.outputs.has-breaking-changes }}
       was-overridden: ${{ steps.evaluate.outputs.was-overridden }}
@@ -120,7 +120,7 @@ jobs:
       - name: Build structured results
         id: build-results
         if: steps.baseline.outputs.has-baseline == 'true'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           HAS_BREAKING: ${{ steps.oasdiff.outputs.has-breaking }}
           SPEC_PATH: ${{ inputs.spec-path }}
@@ -246,7 +246,7 @@ jobs:
         if: >-
           !cancelled()
           && steps.baseline.outputs.has-baseline == 'true'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           HAS_BREAKING: ${{ steps.oasdiff.outputs.has-breaking }}
           OVERRIDE_LABEL: ${{ inputs.override-label }}
@@ -331,7 +331,7 @@ jobs:
 
       - name: Upload results
         if: always() && steps.baseline.outputs.has-baseline == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: breaking-change-results
           path: |
