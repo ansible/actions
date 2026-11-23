@@ -165,6 +165,9 @@ jobs:
   upload-artifact:
     name: upload-artifact-${{ matrix.name || matrix.runs-on }}
     needs: prek
+    permissions:
+      actions: write
+      contents: read
     env:
       # ACTIONS_RUNNER_DEBUG: "true"
       # ACTIONS_STEP_DEBUG: "true"
@@ -309,10 +312,11 @@ jobs:
 
       # Download Artifact #1 and verify the correctness of the content
       - name: "Download artifact #1"
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: "Artifact-A-${{ matrix.name }}"
           path: some/new/path
+          github-token: ${{ github.token }}
 
       - name: "Verify Artifact #1"
         run: |
@@ -329,10 +333,11 @@ jobs:
 
       # Download Artifact #2 and verify the correctness of the content
       - name: "Download artifact #2"
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: "Artifact-Wildcard-${{ matrix.name }}"
           path: some/other/path
+          github-token: ${{ github.token }}
 
       - name: "Verify Artifact #2"
         run: |
@@ -350,10 +355,11 @@ jobs:
 
       # Download Artifact #3 and verify the correctness of the content
       - name: "Download artifact #3"
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: "Artifact-Wildcard-${{ matrix.name }}"
           path: verify-artifact-3
+          github-token: ${{ github.token }}
 
       - name: "Verify Artifact #3"
         run: |
@@ -371,10 +377,11 @@ jobs:
 
       # Download Artifact #4 and verify the correctness of the content
       - name: "Download artifact #4"
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: "Multi-Path-Artifact-${{ matrix.name }}"
           path: multi/artifact
+          github-token: ${{ github.token }}
 
       - name: "Verify Artifact #4"
         run: |
@@ -392,10 +399,11 @@ jobs:
 
       - name: "Download symlinked artifact"
         if: ${{ !contains(matrix.name, 'wsl') }}
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: "Symlinked-Artifact-${{ matrix.name }}"
           path: from/symlink
+          github-token: ${{ github.token }}
 
       - name: "Verify symlinked artifact"
         if: ${{ !contains(matrix.name, 'wsl') }}
@@ -432,12 +440,18 @@ jobs:
           path: path/to/dir-1/file1.txt
           overwrite: true
 
+      # Artifact metadata can lag briefly after overwrite+delete; pause before re-download.
+      - name: "Wait for overwritten artifact propagation"
+        if: runner.os == 'Windows' && !contains(matrix.name, 'wsl')
+        run: sleep 5
+
       # Download replaced Artifact #1 and verify the correctness of the content
       - name: "Download artifact #1 again"
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: "Artifact-A-${{ matrix.name }}"
           path: overwrite/some/new/path
+          github-token: ${{ github.token }}
 
       - name: "Verify Artifact #1 again"
         run: |
